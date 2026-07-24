@@ -149,13 +149,17 @@ function showUebersichtError(msg) {
 
 function renderMeineBestellung() {
   const offen = appData.bestellfensterOffen !== false;
+  // Bestellen setzt seit 2026-07-24 (2. Runde) Bearbeiten-Recht voraus (Sehen = absolut
+  // nichts editierbar); serverseitig zusätzlich via WRITE_REQUIRES_EDIT_PERMISSION.
+  const bearbeitbar = offen && canEdit();
   const mine = appData.bestellungen[currentUsername] || { positionen: [], kommentar: "" };
   const aktiveArtikel = appData.katalog.artikel.filter((a) => a.aktiv !== false || hatPosition(mine, a.id));
 
-  document.getElementById("fenster-banner-card").style.display = offen ? "none" : "block";
-  if (!offen) {
-    document.getElementById("fenster-banner").textContent =
-      "🔒 Das Bestellfenster ist geschlossen — Änderungen sind nicht mehr möglich. Bei Fragen wende dich an den Admin.";
+  document.getElementById("fenster-banner-card").style.display = bearbeitbar ? "none" : "block";
+  if (!bearbeitbar) {
+    document.getElementById("fenster-banner").textContent = !offen
+      ? "🔒 Das Bestellfenster ist geschlossen — Änderungen sind nicht mehr möglich. Bei Fragen wende dich an den Admin."
+      : "👁 Nur Ansicht — Bestellungen aufgeben ist Bearbeitern vorbehalten.";
   }
 
   const rowsEl = document.getElementById("bestellung-rows");
@@ -170,7 +174,7 @@ function renderMeineBestellung() {
       return `
         <div class="bestell-row" data-artikel-id="${escapeHtml(a.id)}">
           <span class="bestell-artikel-name">${escapeHtml(a.name)}${inaktivLabel}</span>
-          <select class="bestell-groesse" ${offen ? "" : "disabled"}>
+          <select class="bestell-groesse" ${bearbeitbar ? "" : "disabled"}>
             <option value="">— keine Auswahl —</option>
             ${a.groessen.map((g) => `<option value="${escapeHtml(g)}" ${g === groesse ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
           </select>
@@ -181,8 +185,8 @@ function renderMeineBestellung() {
 
   const kommentarEl = document.getElementById("f-kommentar");
   kommentarEl.value = mine.kommentar || "";
-  kommentarEl.disabled = !offen;
-  document.getElementById("btn-submit").style.display = offen ? "" : "none";
+  kommentarEl.disabled = !bearbeitbar;
+  document.getElementById("btn-submit").style.display = bearbeitbar ? "" : "none";
 
   document.getElementById("letzte-aenderung").textContent =
     mine.letzteAenderung ? `Zuletzt geändert am ${fmtDate(mine.letzteAenderung)}.` : "";

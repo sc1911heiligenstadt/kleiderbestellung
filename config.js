@@ -16,7 +16,8 @@ const APP_CHANGELOG = [
       {
         title: "Anmeldung & Speicherung",
         items: [
-          "Automatische Nextcloud-Synchronisierung über die zentrale Anmeldung (Tools-Übersicht) — kein separates Passwort auf diesem Gerät nötig."
+          "Automatische Nextcloud-Synchronisierung über die zentrale Anmeldung (Tools-Übersicht) — kein separates Passwort auf diesem Gerät nötig.",
+          "Bestellen setzt jetzt Bearbeiten-Recht voraus: Wer das Tool nur sehen darf, sieht das Bestellformular schreibgeschützt mit Hinweis und kann keine Bestellung mehr abgeben (auch serverseitig gesperrt)."
         ]
       },
       {
