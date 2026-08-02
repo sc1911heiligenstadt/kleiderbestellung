@@ -2,57 +2,61 @@ const APP_VERSION = "1.0";
 
 const APP_CHANGELOG = [
   {
-    version: "1.1",
-    groups: [
-      {
-        title: "Bedienung am Handy",
-        items: [
-          "Die Tab-Leiste bricht am Handy jetzt um, statt seitlich aus dem Bild zu laufen. Vorher waren die hinteren Tabs auf schmalen Bildschirmen nicht erreichbar.",
-          "Eingabefelder sind am Handy mindestens 16 Pixel groß. Dadurch zoomt der iPhone-Browser beim Antippen eines Feldes nicht mehr ungefragt in die Seite hinein und bleibt danach verschoben stehen."
-        ]
-      }
-    ]
-  },
-  {
     version: "1.0",
     groups: [
       {
         title: "Bestellung aufgeben",
         items: [
-          "Trainer:innen wählen aus einem Artikelkatalog (z.B. Trainingsjacke, Poloshirt) die passende Größe; die Menge je Artikel ist vom Verein über den Artikelkatalog fest vorgegeben.",
-          "Die eigene Bestellung kann beliebig oft geändert werden, solange das Bestellfenster geöffnet ist.",
-          "Kommentarfeld für Anmerkungen zur Bestellung (z.B. Rückfragen zur Größe).",
-          "Betreute Mannschaft(en) aus dem zentralen Trainerprofil (Tools-Übersicht) werden als Hinweis neben dem eigenen Namen angezeigt, sofern dort gepflegt."
+          "Trainerinnen und Trainer wählen aus einem Artikelkatalog die passende Größe — etwa Trainingsjacke oder Poloshirt.",
+          "Wie viele Stücke je Artikel möglich sind, gibt der Verein über den Katalog vor.",
+          "Die eigene Bestellung lässt sich beliebig oft ändern, solange das Bestellfenster offen ist.",
+          "Ein Kommentarfeld nimmt Anmerkungen auf, zum Beispiel Rückfragen zur Größe.",
+          "Die betreuten Mannschaften stehen als Hinweis neben dem eigenen Namen, sofern sie im zentralen Trainerprofil gepflegt sind."
         ]
       },
       {
-        title: "Anmeldung & Speicherung",
+        title: "Bestellfenster",
         items: [
-          "Automatische Nextcloud-Synchronisierung über die zentrale Anmeldung (Tools-Übersicht) — kein separates Passwort auf diesem Gerät nötig.",
-          "Bestellen setzt jetzt Bearbeiten-Recht voraus: Wer das Tool nur sehen darf, sieht das Bestellformular schreibgeschützt mit Hinweis und kann keine Bestellung mehr abgeben (auch serverseitig gesperrt)."
+          "Das Bestellfenster lässt sich öffnen und schließen.",
+          "Ist es geschlossen, sind alle Bestellungen nur noch lesbar — damit sich nach der Bestellung beim Lieferanten nichts mehr verschiebt.",
+          "Wieder öffnen ist jederzeit möglich."
         ]
       },
       {
-        title: "Bestellfenster (Administration)",
+        title: "Artikelkatalog",
         items: [
-          "Artikelkatalog pflegen, Bestellfenster öffnen/schließen, Bestellübersicht und fremde Bestellungen löschen sind an die Stufe „Administrieren“ der Gruppen-Verwaltung gekoppelt (Häkchen im Sichtbarkeits-Panel der Tools-Übersicht) — die eigene Bestellung aufgeben/ändern bleibt für jeden mit Tool-Zugriff unverändert möglich.",
-          "Das Bestellfenster kann geschlossen werden — danach sind alle Bestellungen nur noch lesbar, damit nach Auslösung der Lieferanten-Bestellung keine Änderungen mehr möglich sind.",
-          "Wieder-Öffnen jederzeit möglich.",
-          "Nach dem Speichern der eigenen Bestellung aktualisiert sich die Bestellübersicht für Administrierende sofort (vorher blieb sie bis zum nächsten Neuladen auf dem alten Stand)."
+          "Artikel mit Namen, verfügbaren Größen und Standardmenge anlegen, bearbeiten, stilllegen oder entfernen.",
+          "Ein Artikel, der schon bestellt wurde, lässt sich nur stilllegen und nicht löschen — sonst stünden bestehende Bestellungen ohne Bezug da."
         ]
       },
       {
-        title: "Artikelkatalog (Administration)",
-        items: [
-          "Artikel mit Name, verfügbaren Größen und Standardmenge anlegen, bearbeiten, deaktivieren oder entfernen.",
-          "Artikel, die bereits bestellt wurden, können nur deaktiviert (nicht gelöscht) werden, damit bestehende Bestellungen konsistent bleiben."
-        ]
-      },
-      {
-        title: "Bestellungsübersicht & Export (Administration)",
+        title: "Übersicht und Bestellliste",
         items: [
           "Tabelle aller abgegebenen Bestellungen mit Name, Positionen und letzter Änderung.",
-          "Export als Text- oder PDF-Datei, gruppiert nach Artikel und Größe — direkt als Bestellliste an den Lieferanten weiterreichbar."
+          "Export als Text- oder PDF-Datei, gruppiert nach Artikel und Größe — so lässt sie sich direkt an den Lieferanten weiterreichen.",
+          "Nach dem Speichern einer Bestellung aktualisiert sich die Übersicht sofort."
+        ]
+      },
+      {
+        title: "Wer darf was",
+        items: [
+          "Sehen: das Bestellformular schreibgeschützt mit Hinweis; eine Bestellung abgeben geht nicht, auch nicht am Bildschirm vorbei.",
+          "Bearbeiten: die eigene Bestellung aufgeben und ändern.",
+          "Administrieren: Artikelkatalog pflegen, Bestellfenster öffnen und schließen, Gesamtübersicht einsehen, fremde Bestellungen löschen und die Bestellliste exportieren.",
+          "Der Reiter „Info“ ist für alle sichtbar."
+        ]
+      },
+      {
+        title: "Bedienung am Handy",
+        items: [
+          "Die Reiterleiste bricht am Handy um, statt seitlich aus dem Bild zu laufen — auch die hinteren Reiter sind auf schmalen Bildschirmen erreichbar.",
+          "Eingabefelder sind mindestens 16 Pixel groß, damit der iPhone-Browser beim Antippen nicht ungefragt in die Seite hineinzoomt und verschoben stehen bleibt."
+        ]
+      },
+      {
+        title: "Daten & Speicherung",
+        items: [
+          "Gespeichert wird in der Vereins-Nextcloud über die zentrale Anmeldung der Tools-Übersicht — ein eigenes Passwort braucht es nicht."
         ]
       }
     ]
