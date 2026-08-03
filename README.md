@@ -2,10 +2,10 @@
 
 Bestellformular für Vereinskleidung/-ausrüstung als eigenständige, clientseitige
 Web-App ohne Build-Step (Vanilla HTML/CSS/JS) — Teil der
-[Tools-Übersicht](https://tecko1985.github.io/ToolsUebersicht/) des 1. SC 1911
+[Tools-Übersicht](https://sc1911heiligenstadt.github.io/ToolsUebersicht/) des 1. SC 1911
 Heiligenstadt.
 
-**Live:** https://tecko1985.github.io/kleiderbestellung/
+**Live:** https://sc1911heiligenstadt.github.io/kleiderbestellung/
 
 ---
 
@@ -37,7 +37,7 @@ Heiligenstadt.
 
 ### Daten & Speicherung
 - Automatische Nextcloud-Synchronisierung über die zentrale Anmeldung in der
-  [Tools-Übersicht](https://tecko1985.github.io/ToolsUebersicht/): einmal dort
+  [Tools-Übersicht](https://sc1911heiligenstadt.github.io/ToolsUebersicht/): einmal dort
   anmelden, danach wird diese Seite automatisch geladen und gespeichert — auch
   am Handy, ohne WebDAV-Adresse, Benutzername oder App-Passwort auf dem Gerät.
 - Nur wer das Tool in der Übersicht sehen darf, kann es öffnen (Gruppen-Rechte
@@ -55,7 +55,7 @@ npx serve .
 ```
 
 Hinweis: Die geteilte Anmeldung mit der Tools-Übersicht (`localStorage` unter
-der Origin `tecko1985.github.io`) funktioniert nur auf der Live-Seite, nicht
+der Origin `sc1911heiligenstadt.github.io`) funktioniert nur auf der Live-Seite, nicht
 unter `localhost`.
 
 ---
