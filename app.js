@@ -117,14 +117,6 @@ function setupTabs() {
     btn.addEventListener("click", () => activateTab(btn.dataset.tab));
   });
 
-  // Versionshistorie liegt im oeffentlichen Bestellung-Tab (siehe index.html), nicht im
-  // admin-only Einstellungen-Tab — fuer jeden eingeloggten Nutzer erreichbar.
-  const versionBadgeHeader = document.getElementById("version-badge");
-  const openVersionHistory = () => activateTab("info");
-  versionBadgeHeader.addEventListener("click", openVersionHistory);
-  versionBadgeHeader.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openVersionHistory(); }
-  });
 }
 
 function showFormError(msg) {
@@ -513,7 +505,6 @@ function showConnectScreen(errorMsg) {
 }
 
 async function init() {
-  document.getElementById("version-badge").textContent = "v" + APP_VERSION;
   document.getElementById("version-badge-2").textContent = "v" + APP_VERSION;
   renderChangelog();
   setupTabs();
