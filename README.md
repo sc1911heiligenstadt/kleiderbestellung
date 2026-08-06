@@ -1,83 +1,23 @@
-# Kleiderbestellung (v1.0)
+# 👕 Kleiderbestellung
 
-Bestellformular für Vereinskleidung/-ausrüstung als eigenständige, clientseitige
-Web-App ohne Build-Step (Vanilla HTML/CSS/JS) — Teil der
-[Tools-Übersicht](https://sc1911heiligenstadt.github.io/ToolsUebersicht/) des 1. SC 1911
-Heiligenstadt.
+Trainer:innen bestellen Vereinskleidung/-ausrüstung mit ihrer Größe aus einem Artikelkatalog; Admin verwaltet Katalog und Bestellfenster und exportiert eine Lieferanten-Bestellliste.
 
-**Live:** https://sc1911heiligenstadt.github.io/kleiderbestellung/
+**➡️ [Kleiderbestellung öffnen](https://sc1911heiligenstadt.github.io/kleiderbestellung/)**
 
----
+## Zugang
 
-## Funktionen
+Die Anmeldung läuft über die [Tools-Übersicht](https://sc1911heiligenstadt.github.io/ToolsUebersicht/) — dort einmal anmelden, danach ist dieses Werkzeug offen.
 
-### Bestellung aufgeben (Trainer:innen)
-- Je Artikel im Katalog (z.B. Trainingsjacke, Poloshirt) die passende Größe
-  wählen; die Menge ist vom Verein über den Artikelkatalog fest vorgegeben.
-- Die eigene Bestellung kann beliebig oft geändert werden, solange das
-  Bestellfenster geöffnet ist — die zuletzt gespeicherten Werte werden immer
-  vorbelegt angezeigt.
-- Ist das Bestellfenster geschlossen, wird die eigene Bestellung nur noch
-  schreibgeschützt angezeigt.
-- Betreute Mannschaft(en) aus dem zentralen Trainerprofil (Tools-Übersicht)
-  werden als Hinweis neben dem eigenen Namen angezeigt, sofern dort gepflegt.
-
-### Artikelkatalog & Bestellfenster (nur Admins)
-- Artikel mit Name, verfügbaren Größen und Standardmenge anlegen, bearbeiten,
-  deaktivieren oder entfernen. Bereits bestellte Artikel können nur deaktiviert
-  (nicht gelöscht) werden, damit bestehende Bestellungen konsistent bleiben.
-- Das Bestellfenster kann geschlossen werden, damit nach Auslösung der
-  Lieferanten-Bestellung keine Änderungen mehr möglich sind. Wieder-Öffnen
-  jederzeit möglich.
-
-### Bestellungsübersicht & Export (nur Admins)
-- Tabelle aller abgegebenen Bestellungen (Name, Positionen, letzte Änderung).
-- Export als Text- oder PDF-Datei, gruppiert nach Artikel und Größe — direkt
-  als Bestellliste an einen Lieferanten weiterreichbar.
-
-### Daten & Speicherung
-- Automatische Nextcloud-Synchronisierung über die zentrale Anmeldung in der
-  [Tools-Übersicht](https://sc1911heiligenstadt.github.io/ToolsUebersicht/): einmal dort
-  anmelden, danach wird diese Seite automatisch geladen und gespeichert — auch
-  am Handy, ohne WebDAV-Adresse, Benutzername oder App-Passwort auf dem Gerät.
-- Nur wer das Tool in der Übersicht sehen darf, kann es öffnen (Gruppen-Rechte
-  werden serverseitig geprüft).
-
----
+Die Rechte gelten in drei Stufen: **Sehen** (nur ansehen), **Bearbeiten** (Einträge pflegen) und **Administrieren** (Einstellungen und Verwaltung). Wer welche Stufe hat, legt die Tools-Übersicht fest.
 
 ## Lokal starten
 
-`fetch()`-Aufrufe von einem `file://`-Origin verhalten sich inkonsistent (CORS).
-Die App daher über einen lokalen Static-Server öffnen:
+Über den Eintrag `kleiderbestellung` in `E:\.claude\launch.json` — der Server läuft dann auf `http://localhost:8795/`.
 
-```
-npx serve .
-```
+## Technik
 
-Hinweis: Die geteilte Anmeldung mit der Tools-Übersicht (`localStorage` unter
-der Origin `sc1911heiligenstadt.github.io`) funktioniert nur auf der Live-Seite, nicht
-unter `localhost`.
+Vanilla JavaScript ohne Build-Schritt — die Dateien werden so ausgeliefert, wie sie im Repo liegen. Veröffentlicht über GitHub Pages. Die Daten liegen in der Vereins-Nextcloud; der Zugriff läuft ausschließlich über den Login-Worker der Tools-Übersicht, nie mit Zugangsdaten im Browser.
 
 ---
 
-## Datenmodell
-
-Eine JSON-Datei, zentral über den Login-Gateway der Tools-Übersicht in der
-Vereins-Nextcloud gespeichert (siehe `db.js`, `GATEWAY_URL`/`GATEWAY_APP_ID`):
-
-```js
-{
-  "katalog": { "artikel": [ { "id", "name", "groessen": [...], "aktiv" } ] },
-  "bestellfensterOffen": true,
-  "bestellungen": {
-    "<username>": {
-      "vorname", "nachname",
-      "positionen": [ { "artikelId", "groesse", "menge" } ],
-      "kommentar", "letzteAenderung"
-    }
-  }
-}
-```
-
-Artikel werden über einen stabilen `id`-Slug referenziert, nicht über den
-Namen, damit Umbenennungen bestehende Bestellungen nicht verwaisen lassen.
+Ein Werkzeug des 1. SC 1911 Heiligenstadt. Alle Werkzeuge auf einen Blick: [Tools-Übersicht](https://sc1911heiligenstadt.github.io/ToolsUebersicht/) · Erklärungen im [Toolbox Wiki](https://sc1911heiligenstadt.github.io/Vereinswiki/).
