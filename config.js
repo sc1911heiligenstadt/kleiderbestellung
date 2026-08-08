@@ -2,6 +2,36 @@ const APP_VERSION = "1.0";
 
 const APP_CHANGELOG = [
   {
+    version: "1.1",
+    groups: [
+      {
+        title: "Bestellaktionen sind jetzt getrennt",
+        items: [
+          "Statt eines einzigen Topfes gibt es beliebig viele Bestellaktionen nebeneinander — zum Beispiel Trainerpaket, Spielerpaket und Funktionärspaket.",
+          "Jede Aktion erscheint im Reiter „Meine Bestellung“ als eigene Karte mit eigenen Artikeln, eigenem Kommentar und eigenem Speichern-Knopf.",
+          "Jede Aktion hat ihr eigenes Bestellfenster: eine kann beim Lieferanten und damit geschlossen sein, während eine andere noch läuft.",
+          "Eine geschlossene Aktion sehen nur noch die, die dort auch bestellt haben — abgeschlossene Runden stehen also nicht mehr allen im Weg.",
+          "Alles, was vor dieser Änderung bestellt wurde, steht vollständig in der Aktion „Bestellaktion 1“ und lässt sich dort umbenennen und aufteilen."
+        ]
+      },
+      {
+        title: "Katalog nach Aktion sortiert",
+        items: [
+          "Der Artikelkatalog ist nach Bestellaktion gruppiert; ein neuer Artikel wird beim Anlegen einer Aktion zugeordnet.",
+          "Ein Artikel lässt sich über ein Auswahlfeld in eine andere Aktion verschieben — bereits abgegebene Bestellungen dieses Artikels wandern mit, damit keine Bestellung ins Leere zeigt.",
+          "Eine Bestellaktion lässt sich anlegen, umbenennen, schließen, wieder öffnen und entfernen. Entfernen geht erst, wenn keine Bestellungen mehr darin liegen."
+        ]
+      },
+      {
+        title: "Übersicht und Bestellliste je Aktion",
+        items: [
+          "Die Bestellungsübersicht zeigt jede Aktion als eigenen Abschnitt.",
+          "Der Export lässt sich auf eine einzelne Bestellaktion einschränken; „Alle Bestellaktionen“ liefert eine Datei mit einem Abschnitt und einer eigenen Summe je Aktion."
+        ]
+      }
+    ]
+  },
+  {
     version: "1.0",
     groups: [
       {

@@ -169,6 +169,60 @@ button.btn:disabled { opacity: 0.6; cursor: default; }
   font-weight: 600;
 }
 
+/* ---------- Bestellaktionen ---------- */
+
+.aktion-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.aktion-head h2 { margin-bottom: 0; }
+.aktion-status {
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.aktion-status.offen { background: var(--green-light); color: var(--green); }
+.aktion-status.zu { background: var(--gray); color: var(--muted); }
+.bestell-aktion .fenster-banner { margin-bottom: 12px; }
+
+.aktion-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.aktion-row.zu { background: var(--gray); }
+.aktion-row-main { display: flex; flex-direction: column; gap: 4px; flex: 1 1 240px; }
+.aktion-row-main .aktion-name {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+  width: 100%;
+}
+.aktion-row-meta { font-size: 12px; }
+.aktion-row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.katalog-gruppe { margin-bottom: 18px; }
+.katalog-gruppe:last-child { margin-bottom: 0; }
+.katalog-gruppe-titel {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--blue);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.uebersicht-gruppe { margin-bottom: 18px; }
+.uebersicht-gruppe:last-child { margin-bottom: 0; }
+
 /* ---------- Meine Bestellung: Artikel-Zeilen ---------- */
 
 .bestell-row {
@@ -210,16 +264,18 @@ button.btn:disabled { opacity: 0.6; cursor: default; }
 }
 .katalog-row.inaktiv { opacity: 0.6; background: var(--gray); }
 .katalog-row-main { display: flex; gap: 10px; flex: 1 1 280px; flex-wrap: wrap; }
-.katalog-row-main input {
+.katalog-row-main input, .katalog-row-main select {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 14px;
   font-family: inherit;
+  background: var(--white);
 }
 .katalog-name { flex: 1 1 160px; font-weight: 600; }
 .katalog-groessen { flex: 2 1 220px; }
 .katalog-menge { flex: 0 0 90px; }
+.katalog-aktion { flex: 1 1 150px; color: var(--muted); }
 .katalog-row-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .katalog-aktiv-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); white-space: nowrap; }
 
@@ -245,7 +301,8 @@ body.printing-report > *:not(#print-area) { display: none !important; }
 body.printing-report #print-area { display: block; padding: 20px; }
 #print-area h1 { font-size: 1.4rem; margin-bottom: 4px; color: #000; }
 #print-area .print-meta { font-size: 0.85rem; color: #444; margin-bottom: 16px; }
-.print-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+#print-area h2.print-aktion { font-size: 1.05rem; margin: 18px 0 6px; color: #000; }
+.print-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 10px; }
 .print-table th, .print-table td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; color: #000; }
 .print-table th.num, .print-table td.num { text-align: right; white-space: nowrap; }
 .print-table tr.total-row td { font-weight: 700; border-top: 2px solid #000; }
