@@ -70,25 +70,3 @@ async function fetchMe() {
   if (gatewayMe) { const me = gatewayMe; gatewayMe = null; return me; }
   return gatewayRequest({ action: "me", app: GATEWAY_APP_ID });
 }
-
-// Serverseitige Prüfung eines Aktions-Passworts. Das Passwort liegt als Worker-Secret
-// im landingpage-Worker, nicht im Quellcode.
-async function verifyActionPassword(scope, password) {
-  let resp;
-  try {
-    resp = await fetch(GATEWAY_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "verify-action-password", scope, password })
-    });
-  } catch (_) {
-    throw new Error("Keine Verbindung zum Server — Passwortprüfung nicht möglich.");
-  }
-  if (resp.status === 403) return false;
-  if (resp.ok) return true;
-  const body = await resp.json().catch(() => ({}));
-  if (resp.status === 400 && body.error === "Unbekannte Aktion") {
-    throw new Error("Der Server kennt die Passwortprüfung noch nicht — das Worker-Update (landingpage) muss erst deployed werden.");
-  }
-  throw new Error(body.error || ("Passwortprüfung fehlgeschlagen (HTTP " + resp.status + ")"));
-}
