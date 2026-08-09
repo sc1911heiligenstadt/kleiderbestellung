@@ -363,20 +363,230 @@ function renderAktionenVerwaltung() {
     const offen = a.offen !== false;
     // Gleiche Zählweise wie aktionHatBestellungen() — sonst steht hier "0 Bestellungen",
     // während das Entfernen der Aktion mit Verweis auf vorhandene Bestellungen abgelehnt wird.
-    const anzahl = Object.values(a.bestellungen).filter((b) => (b.positionen || []).length || (b.kommentar || "").trim()).length;
+    const alle = Object.values(a.bestellungen).filter((b) => (b.positionen || []).length || (b.kommentar || "").trim());
+    const anzahl = alle.length;
+    const extern = alle.filter((b) => b.quelle === "extern").length;
+    const externMeta = extern ? ` (davon ${extern} über den Link)` : "";
     return `
-    <div class="aktion-row ${offen ? "" : "zu"}" data-aktion-id="${escapeHtml(a.id)}">
-      <div class="aktion-row-main">
-        <input type="text" class="aktion-name" value="${escapeHtml(a.name)}" />
-        <span class="muted aktion-row-meta">${a.artikel.length} Artikel · ${anzahl} Bestellung${anzahl === 1 ? "" : "en"} · ${offen ? "läuft" : "geschlossen"}</span>
+    <div class="aktion-row-wrap" data-aktion-id="${escapeHtml(a.id)}">
+      <div class="aktion-row ${offen ? "" : "zu"}">
+        <div class="aktion-row-main">
+          <input type="text" class="aktion-name" value="${escapeHtml(a.name)}" />
+          <span class="muted aktion-row-meta">${a.artikel.length} Artikel · ${anzahl} Bestellung${anzahl === 1 ? "" : "en"}${externMeta} · ${offen ? "läuft" : "geschlossen"}</span>
+        </div>
+        <div class="aktion-row-actions">
+          <button type="button" class="btn secondary small btn-save-aktion">Speichern</button>
+          <button type="button" class="btn secondary small btn-extern-aktion">${offenesExternPanel === a.id ? "Link ausblenden" : "🔗 Link für Spieler"}</button>
+          <button type="button" class="btn secondary small btn-toggle-aktion">${offen ? "Schließen" : "Wieder öffnen"}</button>
+          <button type="button" class="btn secondary small btn-delete-aktion">Entfernen</button>
+        </div>
       </div>
-      <div class="aktion-row-actions">
-        <button type="button" class="btn secondary small btn-save-aktion">Speichern</button>
-        <button type="button" class="btn secondary small btn-toggle-aktion">${offen ? "Schließen" : "Wieder öffnen"}</button>
-        <button type="button" class="btn secondary small btn-delete-aktion">Entfernen</button>
-      </div>
+      ${externPanelHtml(a)}
     </div>`;
   }).join("");
+  zeichneExternQr();
+}
+
+// ---------- Einstellungen: Bestell-Link für Spieler ohne Vereinskonto ----------
+//
+// Spieler haben kein Konto in der Tools-Übersicht. Statt sie alle anzulegen,
+// trägt jede Bestellaktion einen eigenen Link mit 64-stelligem Zufallstoken, der
+// auf extern.html zeigt. Wer ihn öffnet, weist sich mit Name und Geburtsjahr aus
+// und schützt seine Bestellung mit einem selbst gewählten Passwort.
+//
+// ⚠️ Erzeugt und zurückgezogen wird der Token hier über das normale dav-save —
+// dieser Weg steckt hinter Login und canAdmin(). Das SCHREIBEN der externen
+// Bestellungen läuft dagegen bewusst nicht über dav-save, sondern über die
+// schmalen kb-extern-*-Aktionen im Worker; siehe CLAUDE.md.
+
+// Welches Aktions-Panel gerade aufgeklappt ist. Die Zeilen werden bei jeder
+// Änderung komplett neu gebaut — ohne diesen Merker klappte das Panel bei jedem
+// Speichern wieder zu, mitten im Kopieren des Links.
+let offenesExternPanel = null;
+
+function externLinkVon(aktion) {
+  const t = aktion.extern && aktion.extern.token;
+  if (!t || aktion.extern.widerrufen) return "";
+  return EXTERN_BASIS + "#t=" + t;
+}
+
+// ⚠️ crypto.getRandomValues und NICHT crypto.randomUUID: letzteres fehlt auf den
+// älteren iOS-Geräten der Flotte (siehe [[feedback-alte-ios-geraete]]), und 32
+// Zufallsbytes sind hier ohnehin das, was der Worker als 64 Hex-Zeichen erwartet.
+function neuerExternToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function externPanelHtml(aktion) {
+  if (offenesExternPanel !== aktion.id) return "";
+  const link = externLinkVon(aktion);
+  const widerrufen = !!(aktion.extern && aktion.extern.widerrufen);
+
+  if (!link) {
+    const hinweis = widerrufen
+      ? "Der bisherige Link wurde zurückgezogen und führt nicht mehr weiter. Bereits abgegebene Bestellungen sind davon unberührt."
+      : "Für diese Bestellaktion gibt es noch keinen Link.";
+    return `
+    <div class="extern-panel">
+      <h3>Bestell-Link für Spieler ohne Vereinskonto</h3>
+      <p class="muted">${escapeHtml(hinweis)} Wer den Link öffnet, trägt Name und Geburtsjahr ein, wählt seine Größen und vergibt dabei ein eigenes Passwort zum späteren Ändern.</p>
+      <p class="muted extern-fehler" style="display:none;"></p>
+      <div class="btn-row" style="justify-content:flex-start; margin-top:12px;">
+        <button type="button" class="btn secondary small btn-extern-neu">${widerrufen ? "Neuen Link erzeugen" : "Link erzeugen"}</button>
+      </div>
+    </div>`;
+  }
+
+  const zu = aktion.offen === false;
+  return `
+    <div class="extern-panel">
+      <h3>Bestell-Link für Spieler ohne Vereinskonto</h3>
+      ${zu ? `<p class="muted extern-warnung">⚠️ Diese Bestellaktion ist geschlossen — über den Link lässt sich nichts mehr bestellen.</p>` : ""}
+      <p class="muted">Diesen Link verschicken oder den QR-Code zeigen. Ein Vereinskonto braucht dafür niemand.</p>
+      <div class="extern-link-zeile">
+        <input type="text" class="extern-link-feld" readonly value="${escapeHtml(link)}" />
+        <button type="button" class="btn secondary small btn-extern-kopieren">Kopieren</button>
+      </div>
+      <p class="muted extern-hinweis"></p>
+      <div class="extern-qr-box">
+        <div class="extern-qr" data-link="${escapeHtml(link)}"></div>
+        <div class="extern-qr-neben">
+          <p class="muted">Zum Abfotografieren zeigen oder als Bild weitergeben.</p>
+          <div class="btn-row" style="justify-content:flex-start; margin-top:10px;">
+            <button type="button" class="btn secondary small btn-extern-qr">QR-Code als Bild</button>
+          </div>
+        </div>
+      </div>
+      <p class="muted extern-fehler" style="display:none;"></p>
+      <div class="btn-row" style="justify-content:flex-start; margin-top:14px;">
+        <button type="button" class="btn secondary small btn-extern-widerrufen">Link zurückziehen</button>
+      </div>
+    </div>`;
+}
+
+// Der QR wird erst nach dem Einhängen gezeichnet: die Bibliothek schreibt in ein
+// bereits vorhandenes Element, im HTML-String geht das nicht.
+function zeichneExternQr() {
+  document.querySelectorAll(".extern-qr[data-link]").forEach((el) => {
+    QRCodeMini.zeichneQrCode(el, el.dataset.link, 5);
+    const svg = el.querySelector("svg");
+    // qrcode.js ist byte-genau aus dem Kadermanager übernommen und trägt dessen
+    // Beschriftung. Die Datei bleibt bewusst unverändert, damit sie zwischen den
+    // Repos vergleichbar bleibt — der passende Text wird hier nachgesetzt.
+    if (svg) svg.setAttribute("aria-label", "QR-Code zur Kleiderbestellung");
+  });
+}
+
+function externMeldung(wrap, text, alsFehler) {
+  const el = wrap.querySelector(alsFehler ? ".extern-fehler" : ".extern-hinweis");
+  if (!el) return;
+  el.textContent = text || "";
+  if (alsFehler) el.style.display = text ? "block" : "none";
+}
+
+async function externTokenErzeugen(aktionId) {
+  if (!canAdmin()) return;
+  // Der Token wird EINMAL vor dem Speichern erzeugt: saveWithConflictRetry ruft
+  // seine Mutation bei einem Konflikt ein zweites Mal auf, und ein dort neu
+  // gewürfelter Token wäre ein anderer als der, den die Oberfläche danach zeigt.
+  const token = neuerExternToken();
+  try {
+    await saveWithConflictRetry((data) => {
+      const a = findAktion(aktionId, data);
+      if (!a) throw new Error("Diese Bestellaktion wurde inzwischen entfernt.");
+      a.extern = { token, erstelltAm: new Date().toISOString(), widerrufen: false };
+    });
+  } catch (e) {
+    showAktionenError("Der Link konnte nicht erzeugt werden: " + e.message);
+    return;
+  }
+  offenesExternPanel = aktionId;
+  renderAktionenVerwaltung();
+}
+
+async function externTokenWiderrufen(aktionId) {
+  if (!canAdmin()) return;
+  const aktion = findAktion(aktionId);
+  if (!aktion) return;
+  if (!confirm(`Den Bestell-Link für "${aktion.name}" wirklich zurückziehen?\n\nWer den Link hat, kommt danach nicht mehr herein — auch nicht an seine eigene Bestellung. Bereits abgegebene Bestellungen bleiben erhalten.`)) return;
+  try {
+    await saveWithConflictRetry((data) => {
+      const a = findAktion(aktionId, data);
+      if (!a) return;
+      // Den Token LEEREN ist die eigentliche Sperre: der Worker vergleicht gegen
+      // den gespeicherten Wert und überspringt leere. Das Kennzeichen daneben
+      // macht in der Oberfläche nur den Unterschied zwischen "noch keiner
+      // erzeugt" und "es gab einen, er gilt nicht mehr".
+      a.extern = {
+        token: "",
+        erstelltAm: (a.extern && a.extern.erstelltAm) || "",
+        widerrufen: true,
+        widerrufenAm: new Date().toISOString()
+      };
+    });
+  } catch (e) {
+    showAktionenError("Der Link konnte nicht zurückgezogen werden: " + e.message);
+    return;
+  }
+  offenesExternPanel = aktionId;
+  renderAktionenVerwaltung();
+}
+
+async function externLinkKopieren(aktionId, wrap) {
+  const aktion = findAktion(aktionId);
+  const link = aktion ? externLinkVon(aktion) : "";
+  if (!link) return;
+  try {
+    await navigator.clipboard.writeText(link);
+    externMeldung(wrap, "Link kopiert.", false);
+  } catch (_) {
+    // Ohne Zwischenablage-Recht (älteres iOS, Seite nicht über https) bleibt das
+    // Markieren der Weg — deshalb steht der Link ohnehin sichtbar im Feld.
+    const feld = wrap.querySelector(".extern-link-feld");
+    if (feld) { feld.focus(); feld.select(); }
+    externMeldung(wrap, "Bitte von Hand kopieren — das Feld ist markiert.", false);
+  }
+  setTimeout(() => externMeldung(wrap, "", false), 4000);
+}
+
+// SVG → PNG über den Browser: der QR geht als Datei-URI in ein <img> und von dort
+// aufs Canvas. Die Falle mit fremden Namensräumen (siehe
+// [[feedback-svg-nach-png-ueber-browser]]) greift hier nicht — das SVG stammt aus
+// qrcode.js und enthält nur ein einzelnes <path>.
+function externQrHerunterladen(aktionId, wrap) {
+  const aktion = findAktion(aktionId);
+  const svg = wrap.querySelector(".extern-qr svg");
+  if (!aktion || !svg) return;
+  const kante = 900;
+  const quelle = new XMLSerializer().serializeToString(svg);
+  const bild = new Image();
+  bild.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = kante;
+    canvas.height = kante;
+    const ctx = canvas.getContext("2d");
+    // ⚠️ Weiß hinterlegen: PNG kann durchsichtig, und ein QR-Code auf
+    // durchsichtigem Grund ist in einer dunklen Ansicht nicht mehr scannbar.
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, kante, kante);
+    // Harte Kanten behalten — weichgezeichnete Module lesen manche Scanner schlechter.
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(bild, 0, 0, kante, kante);
+    canvas.toBlob((blob) => {
+      if (!blob) { externMeldung(wrap, "Das Bild konnte nicht erzeugt werden.", true); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `kleiderbestellung_${slugify(aktion.name, [])}_qr.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }, "image/png");
+  };
+  bild.onerror = () => externMeldung(wrap, "Das Bild konnte nicht erzeugt werden.", true);
+  bild.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(quelle);
 }
 
 async function addAktion() {
@@ -618,45 +828,92 @@ function renderBestellungsuebersicht() {
   document.getElementById("uebersicht-empty").style.display = mitBestellungen.length ? "none" : "block";
   document.getElementById("uebersicht-rows").innerHTML = mitBestellungen.map((aktion) => {
     const artikelById = Object.fromEntries(aktion.artikel.map((a) => [a.id, a]));
+    // ⚠️ Der Schlüssel ist NICHT immer ein Nutzername: bei einer Bestellung über
+    // den externen Link lautet er "extern:<name>.<jahrgang>" und gehört zu
+    // niemandem in nutzer.json.
     const rows = Object.entries(aktion.bestellungen)
-      .map(([username, b]) => Object.assign({ username }, b))
+      .map(([schluessel, b]) => Object.assign({ schluessel }, b))
       .sort((a, b) => `${a.vorname} ${a.nachname}`.localeCompare(`${b.vorname} ${b.nachname}`, "de"));
     return `
       <div class="uebersicht-gruppe">
         <h3 class="katalog-gruppe-titel">${escapeHtml(aktion.name)}</h3>
-        ${rows.map((r) => `
+        ${rows.map((r) => {
+          const extern = r.quelle === "extern";
+          const jahrgang = extern && r.jahrgang ? ` (${escapeHtml(r.jahrgang)})` : "";
+          const badge = extern ? `<span class="quelle-badge" title="Über den Bestell-Link abgegeben, ohne Vereinskonto">über Link</span>` : "";
+          // Zurücksetzen nur anbieten, wenn wirklich ein Passwort gesetzt ist —
+          // sonst sieht es aus, als bewirke der Knopf nichts.
+          const resetBtn = (extern && r.pw && r.pw.hash)
+            ? `<button type="button" class="btn secondary small btn-reset-passwort" data-schluessel="${escapeHtml(r.schluessel)}" data-aktion-id="${escapeHtml(aktion.id)}">Passwort zurücksetzen</button>`
+            : "";
+          return `
         <div class="confirm-row">
           <div class="confirm-row-info">
-            <span class="confirm-name">${escapeHtml((r.vorname + " " + r.nachname).trim() || r.username)}</span>
+            <span class="confirm-name">${escapeHtml((r.vorname + " " + r.nachname).trim() || r.schluessel)}${jahrgang}${badge}</span>
             <span class="muted">${escapeHtml(positionenLabel(r.positionen, artikelById))}</span>
             <span class="muted">Zuletzt geändert: ${escapeHtml(fmtDate(r.letzteAenderung))}${r.kommentar ? " — " + escapeHtml(r.kommentar) : ""}</span>
           </div>
-          <button type="button" class="btn secondary small btn-delete-bestellung" data-username="${escapeHtml(r.username)}" data-aktion-id="${escapeHtml(aktion.id)}">Löschen</button>
-        </div>`).join("")}
+          <div class="confirm-row-actions">
+            ${resetBtn}
+            <button type="button" class="btn secondary small btn-delete-bestellung" data-schluessel="${escapeHtml(r.schluessel)}" data-aktion-id="${escapeHtml(aktion.id)}">Löschen</button>
+          </div>
+        </div>`;
+        }).join("")}
       </div>`;
   }).join("");
 }
 
-async function deleteBestellung(aktionId, username) {
+async function deleteBestellung(aktionId, schluessel) {
   if (!canAdmin()) return;
   const aktion = findAktion(aktionId);
   if (!aktion) return;
-  const entry = aktion.bestellungen[username];
+  const entry = aktion.bestellungen[schluessel];
   if (!entry) return;
-  const name = `${entry.vorname || ""} ${entry.nachname || ""}`.trim() || username;
+  const name = `${entry.vorname || ""} ${entry.nachname || ""}`.trim() || schluessel;
   if (!confirm(`Bestellung von ${name} aus "${aktion.name}" wirklich löschen?`)) return;
   showUebersichtError("");
   try {
     await saveWithConflictRetry((data) => {
       const ziel = findAktion(aktionId, data);
-      if (ziel) delete ziel.bestellungen[username];
+      if (ziel) delete ziel.bestellungen[schluessel];
     });
   } catch (e) {
     showUebersichtError("Löschen fehlgeschlagen: " + e.message);
     return;
   }
   renderEinstellungen();
-  if (username === currentUsername) renderMeineBestellung();
+  if (schluessel === currentUsername) renderMeineBestellung();
+}
+
+// "Passwort vergessen" bei einer externen Bestellung. Ohne diesen Weg wäre der
+// Besteller dauerhaft ausgesperrt: sein Name und Jahrgang finden die Bestellung
+// weiterhin, nur öffnen kann er sie nicht mehr — und ein zweiter Anlauf unter
+// anderem Namen legte eine Doppelbestellung an.
+//
+// ⚠️ Gelöscht wird NUR das Passwort, nicht die Bestellung. Der Besteller sieht
+// sie beim nächsten Öffnen wieder und vergibt dabei ein neues Passwort. Bis
+// dahin steht sie ungeschützt da — wer Name und Jahrgang errät, kommt heran.
+// Das ist der Preis des Zurücksetzens und der Grund für die Rückfrage.
+async function resetExternPasswort(aktionId, schluessel) {
+  if (!canAdmin()) return;
+  const aktion = findAktion(aktionId);
+  if (!aktion) return;
+  const entry = aktion.bestellungen[schluessel];
+  if (!entry || entry.quelle !== "extern") return;
+  const name = `${entry.vorname || ""} ${entry.nachname || ""}`.trim() || schluessel;
+  if (!confirm(`Passwort der Bestellung von ${name} zurücksetzen?\n\nDie Bestellung selbst bleibt erhalten. Beim nächsten Öffnen des Links wird ein neues Passwort vergeben — bis dahin ist die Bestellung für jeden zu sehen, der Name und Geburtsjahr kennt.`)) return;
+  showUebersichtError("");
+  try {
+    await saveWithConflictRetry((data) => {
+      const ziel = findAktion(aktionId, data);
+      const b = ziel && ziel.bestellungen[schluessel];
+      if (b) delete b.pw;
+    });
+  } catch (e) {
+    showUebersichtError("Zurücksetzen fehlgeschlagen: " + e.message);
+    return;
+  }
+  renderBestellungsuebersicht();
 }
 
 // ---------- Tab "Einstellungen": Export ----------
@@ -812,14 +1069,28 @@ async function init() {
   document.getElementById("btn-export-pdf").addEventListener("click", exportPdf);
   document.getElementById("export-aktion").addEventListener("change", (e) => { exportAktionId = e.target.value; });
 
+  // Der Delegate hängt am Wrapper, nicht mehr an .aktion-row: das Link-Panel
+  // steht UNTER der Zeile und wäre von einem .aktion-row-closest nicht erfasst.
   document.getElementById("aktionen-rows").addEventListener("click", (e) => {
-    const row = e.target.closest(".aktion-row");
-    if (!row) return;
-    const aktionId = row.dataset.aktionId;
+    const wrap = e.target.closest(".aktion-row-wrap");
+    if (!wrap) return;
+    const aktionId = wrap.dataset.aktionId;
     if (e.target.closest(".btn-save-aktion")) {
-      const name = row.querySelector(".aktion-name").value.trim();
+      const name = wrap.querySelector(".aktion-name").value.trim();
       if (!name) { showAktionenError("Der Name darf nicht leer sein."); return; }
       updateAktion(aktionId, { name });
+    } else if (e.target.closest(".btn-extern-aktion")) {
+      showAktionenError("");
+      offenesExternPanel = (offenesExternPanel === aktionId) ? null : aktionId;
+      renderAktionenVerwaltung();
+    } else if (e.target.closest(".btn-extern-neu")) {
+      externTokenErzeugen(aktionId);
+    } else if (e.target.closest(".btn-extern-kopieren")) {
+      externLinkKopieren(aktionId, wrap);
+    } else if (e.target.closest(".btn-extern-qr")) {
+      externQrHerunterladen(aktionId, wrap);
+    } else if (e.target.closest(".btn-extern-widerrufen")) {
+      externTokenWiderrufen(aktionId);
     } else if (e.target.closest(".btn-toggle-aktion")) {
       toggleAktion(aktionId);
     } else if (e.target.closest(".btn-delete-aktion")) {
@@ -846,8 +1117,10 @@ async function init() {
   });
 
   document.getElementById("uebersicht-rows").addEventListener("click", (e) => {
-    const btn = e.target.closest(".btn-delete-bestellung");
-    if (btn) deleteBestellung(btn.dataset.aktionId, btn.dataset.username);
+    const loeschen = e.target.closest(".btn-delete-bestellung");
+    if (loeschen) { deleteBestellung(loeschen.dataset.aktionId, loeschen.dataset.schluessel); return; }
+    const reset = e.target.closest(".btn-reset-passwort");
+    if (reset) resetExternPasswort(reset.dataset.aktionId, reset.dataset.schluessel);
   });
 
   if (!getSessionToken()) {

@@ -10,6 +10,12 @@ Die Anmeldung läuft über die [Tools-Übersicht](https://sc1911heiligenstadt.gi
 
 Die Rechte gelten in drei Stufen: **Sehen** (nur ansehen), **Bearbeiten** (Einträge pflegen) und **Administrieren** (Einstellungen und Verwaltung). Wer welche Stufe hat, legt die Tools-Übersicht fest.
 
+## Bestellen ohne Vereinskonto
+
+Spieler haben kein Konto in der Tools-Übersicht. Für sie lässt sich je Bestellaktion ein eigener Link erzeugen — als QR-Code zum Zeigen oder zum Verschicken. Wer ihn öffnet, trägt Vorname, Nachname und Geburtsjahr ein, wählt seine Größen und vergibt dabei ein eigenes Passwort; damit kommt er später über denselben Link wieder an seine Bestellung.
+
+Zu finden unter **Einstellungen → Bestellaktionen → 🔗 Link für Spieler**. Der Link lässt sich jederzeit zurückziehen; bereits abgegebene Bestellungen bleiben davon unberührt.
+
 ## Lokal starten
 
 Über den Eintrag `kleiderbestellung` in `E:\.claude\launch.json` — der Server läuft dann auf `http://localhost:8795/`.

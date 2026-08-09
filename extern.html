@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>👕 Kleiderbestellung</title>
+<meta name="theme-color" content="#1a56a0" />
+<!-- Diese Seite ist bewusst NICHT im Suchindex: der Link ist der Ausweis. -->
+<meta name="robots" content="noindex, nofollow" />
+<link rel="stylesheet" href="style.css?v=1.5" />
+</head>
+<body>
+
+<header>
+  <h1>👕 Kleiderbestellung</h1>
+  <div class="header-right">
+    <img class="header-logo" src="https://sc1911heiligenstadt.github.io/logo.svg" alt="1. SC 1911 e.V. Heilbad Heiligenstadt" />
+  </div>
+</header>
+
+<main>
+
+  <!-- Ladezustand: steht als einziges im Markup sichtbar, damit beim Öffnen
+       nicht kurz ein leeres Formular aufblitzt, bevor der Katalog da ist. -->
+  <div class="card" id="lade-karte">
+    <div class="empty-state">Bestellung wird geladen …</div>
+  </div>
+
+  <!-- Ungültiger, widerrufener oder fehlender Link -->
+  <div class="card" id="fehler-karte" style="display:none;">
+    <h2>Der Link führt nicht weiter</h2>
+    <p class="muted" id="fehler-text"></p>
+    <p class="muted" style="margin-top:12px;">Frag am besten deinen Trainer nach einem aktuellen Link.</p>
+  </div>
+
+  <!-- ---------- Schritt 1: Wer bist du? ---------- -->
+  <section id="schritt-ident" style="display:none;">
+    <div class="card">
+      <div class="aktion-head">
+        <h2 id="ident-aktion-name"></h2>
+        <span class="aktion-status" id="ident-aktion-status"></span>
+      </div>
+      <div class="fenster-banner" id="ident-banner" style="display:none;"></div>
+      <p class="muted">Trag deinen Namen und dein Geburtsjahr ein. Beides zusammen findet deine
+      Bestellung wieder, wenn du sie später noch einmal ändern willst.</p>
+      <div class="form-grid" style="margin-top:14px;">
+        <div class="form-field">
+          <label for="ident-vorname">Vorname</label>
+          <input type="text" id="ident-vorname" autocomplete="given-name" placeholder="z.B. Max" />
+        </div>
+        <div class="form-field">
+          <label for="ident-nachname">Nachname</label>
+          <input type="text" id="ident-nachname" autocomplete="family-name" placeholder="z.B. Mustermann" />
+        </div>
+        <div class="form-field">
+          <label for="ident-jahrgang">Geburtsjahr</label>
+          <input type="text" id="ident-jahrgang" inputmode="numeric" maxlength="4" placeholder="z.B. 2010" />
+        </div>
+      </div>
+      <p class="muted extern-fehler" id="ident-fehler" style="display:none;"></p>
+      <div class="btn-row" style="justify-content:flex-end; margin-top:8px;">
+        <button type="button" class="btn" id="btn-ident-weiter">Weiter</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- Schritt 2: Passwort einer bestehenden Bestellung ---------- -->
+  <section id="schritt-passwort" style="display:none;">
+    <div class="card">
+      <h2>Für dich liegt schon eine Bestellung vor</h2>
+      <p class="muted">Für <strong id="pw-name"></strong> wurde in dieser Bestellaktion bereits bestellt.
+      Gib das Passwort ein, das damals vergeben wurde — dann kannst du die Bestellung sehen und ändern.</p>
+      <div class="form-field" style="margin-top:14px;">
+        <label for="pw-eingabe">Passwort</label>
+        <input type="password" id="pw-eingabe" autocomplete="current-password" />
+      </div>
+      <p class="muted extern-fehler" id="pw-fehler" style="display:none;"></p>
+      <p class="muted" style="margin-top:12px;">Passwort vergessen? Dein Trainer kann es zurücksetzen,
+      danach kannst du hier ein neues vergeben.</p>
+      <div class="btn-row" style="justify-content:flex-end; margin-top:8px;">
+        <button type="button" class="btn secondary" id="btn-pw-zurueck">Zurück</button>
+        <button type="button" class="btn" id="btn-pw-weiter">Bestellung laden</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- Schritt 3: Die Bestellung ---------- -->
+  <section id="schritt-bestellung" style="display:none;">
+    <div class="card">
+      <div class="aktion-head">
+        <h2 id="b-aktion-name"></h2>
+        <span class="aktion-status" id="b-aktion-status"></span>
+      </div>
+      <div class="fenster-banner" id="b-banner" style="display:none;"></div>
+      <p class="muted" id="b-fuer"></p>
+      <p class="muted" style="margin-top:10px;">Wähle je Artikel deine Größe. Die Menge gibt der Verein vor.</p>
+      <div class="bestellung-rows" id="b-rows" style="margin-top:10px;"></div>
+      <div class="form-field" style="margin-top:14px;">
+        <label for="b-kommentar">Kommentar (optional)</label>
+        <textarea id="b-kommentar" rows="2" placeholder="z.B. Rückfrage zur Größe"></textarea>
+      </div>
+
+      <!-- Nur beim ersten Absenden oder nach einem Zurücksetzen sichtbar. -->
+      <div id="b-pw-neu" style="display:none;">
+        <h3 style="margin-top:18px;">Passwort festlegen</h3>
+        <p class="muted">Damit nur du deine Bestellung ändern kannst. Merk es dir — du brauchst es,
+        wenn du später noch einmal etwas ändern willst.</p>
+        <div class="form-grid" style="margin-top:10px;">
+          <div class="form-field">
+            <label for="b-pw1">Passwort (mindestens 4 Zeichen)</label>
+            <input type="password" id="b-pw1" autocomplete="new-password" />
+          </div>
+          <div class="form-field">
+            <label for="b-pw2">Passwort wiederholen</label>
+            <input type="password" id="b-pw2" autocomplete="new-password" />
+          </div>
+        </div>
+      </div>
+
+      <p class="muted extern-fehler" id="b-fehler" style="display:none;"></p>
+      <div class="btn-row" style="justify-content:flex-end; margin-top:16px;" id="b-btn-zeile">
+        <button type="button" class="btn secondary" id="btn-b-zurueck">Zurück</button>
+        <button type="button" class="btn success" id="btn-b-absenden">Bestellung abschicken</button>
+      </div>
+      <p class="muted" id="b-letzte-aenderung" style="margin-top:10px;"></p>
+    </div>
+  </section>
+
+  <!-- ---------- Schritt 4: Fertig ---------- -->
+  <section id="schritt-fertig" style="display:none;">
+    <div class="card">
+      <h2>✅ Deine Bestellung ist gespeichert</h2>
+      <p id="fertig-text"></p>
+      <p class="muted" style="margin-top:12px;">Solange die Bestellaktion läuft, kannst du über denselben
+      Link jederzeit wieder herein — mit deinem Namen, deinem Geburtsjahr und deinem Passwort.</p>
+      <div class="btn-row" style="justify-content:flex-end; margin-top:16px;">
+        <button type="button" class="btn secondary" id="btn-fertig-aendern">Noch etwas ändern</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="card" id="ds-karte" style="display:none;">
+    <h2>Datenschutz</h2>
+    <p class="muted">Name, Geburtsjahr und die gewählten Größen werden ausschließlich verwendet, um die
+    Kleidung beim Lieferanten zu bestellen und an dich auszugeben. Die Daten liegen auf Servern in
+    Deutschland, die ein Auftragsverarbeiter für den Verein betreibt.</p>
+    <p class="muted" style="margin-top:10px;">Verantwortlich ist der 1. SC 1911 Heiligenstadt,
+    Leineberg 2, 37308 Heilbad Heiligenstadt, Telefon 03606 612206,
+    <a href="mailto:info@sc1911-heiligenstadt.de">info@sc1911-heiligenstadt.de</a>. Auskunft,
+    Berichtigung und Löschung lassen sich unter dieser Anschrift geltend machen.</p>
+    <p class="muted" style="margin-top:10px;"><a href="https://www.sc1911-heiligenstadt.de/datenschutz/" target="_blank" rel="noopener">Datenschutzerklärung des Vereins</a>
+    &middot;
+    <a href="https://www.sc1911-heiligenstadt.de/impressum-2/" target="_blank" rel="noopener">Impressum</a></p>
+  </div>
+
+</main>
+
+<script src="extern.js?v=1.1"></script>
+</body>
+</html>

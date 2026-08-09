@@ -1,6 +1,37 @@
 const APP_VERSION = "1.0";
 
+// Basis des Links, den Spieler ohne Vereinskonto zum Bestellen bekommen.
+// ⚠️ Bewusst die feste Live-Adresse und NICHT aus location abgeleitet: der Link
+// wird verschickt und als QR-Code gezeigt. Aus einem Dev-Server erzeugt zeigte
+// er sonst auf localhost — und das fiele erst auf, wenn ihn jemand scannt.
+const EXTERN_BASIS = "https://sc1911heiligenstadt.github.io/kleiderbestellung/extern.html";
+
 const APP_CHANGELOG = [
+  {
+    version: "1.1",
+    groups: [
+      {
+        title: "Bestellen ohne Vereinskonto",
+        items: [
+          "Spieler haben kein Konto in der Tools-Übersicht und können jetzt trotzdem selbst bestellen — über einen Link je Bestellaktion, den es als QR-Code zum Zeigen und zum Verschicken gibt.",
+          "Wer den Link öffnet, trägt Vorname, Nachname und Geburtsjahr ein und wählt seine Größen. Die Menge gibt weiterhin der Verein vor.",
+          "Beim ersten Absenden vergibt der Besteller ein eigenes Passwort. Damit kommt er über denselben Link jederzeit wieder an seine Bestellung und kann sie ändern, solange die Aktion läuft.",
+          "Das Geburtsjahr gehört zum Namen dazu: zwei gleichnamige Spieler bekommen dadurch getrennte Bestellungen.",
+          "Umlaute und Schreibweisen sind egal — „Müller“ und „Mueller“ führen auf dieselbe Bestellung."
+        ]
+      },
+      {
+        title: "Den Link verwalten",
+        items: [
+          "Je Bestellaktion lässt sich ein Link erzeugen, als QR-Code anzeigen, als Bild herunterladen und wieder zurückziehen.",
+          "Ein zurückgezogener Link führt sofort ins Leere; bereits abgegebene Bestellungen bleiben davon unberührt.",
+          "In der Bestellungsübersicht sind externe Bestellungen als solche gekennzeichnet und tragen den Jahrgang.",
+          "Hat jemand sein Passwort vergessen, lässt es sich dort zurücksetzen — er vergibt dann beim nächsten Öffnen ein neues und sieht seine bisherige Bestellung wieder.",
+          "Externe Bestellungen zählen in der Bestellliste für den Lieferanten ganz normal mit."
+        ]
+      }
+    ]
+  },
   {
     version: "1.0",
     groups: [

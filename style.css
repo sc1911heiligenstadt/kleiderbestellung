@@ -324,3 +324,61 @@ nav .nav-right { margin-left: auto; display: flex; gap: inherit; }
 @media (max-width: 820px) {
   input, select, textarea { font-size: 16px !important; }
 }
+
+/* ---------- Bestell-Link fuer Spieler ohne Vereinskonto ---------- */
+
+.aktion-row-wrap { margin-bottom: 8px; }
+/* Die Zeile traegt ihren Abstand jetzt ueber den Wrapper -- sonst stuende das
+   aufgeklappte Panel mit 8px Luecke von seiner eigenen Zeile weg. */
+.aktion-row-wrap .aktion-row { margin-bottom: 0; }
+
+.extern-panel {
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 14px 12px;
+  background: var(--blue-light);
+}
+.extern-panel h3 { font-size: 14px; margin-bottom: 8px; color: var(--blue); }
+.extern-warnung { color: var(--gold); font-weight: 600; margin-bottom: 8px; }
+
+.extern-link-zeile { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+/* min-width:0 ist Pflicht: ein input traegt eine intrinsische Mindestbreite, und
+   der Link ist ueber 130 Zeichen lang -- ohne das zieht er die Karte und damit
+   die ganze Seite am Handy seitlich auf. */
+.extern-link-feld {
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--white);
+  color: var(--muted);
+}
+.extern-hinweis { min-height: 18px; margin-top: 6px; }
+.extern-fehler { color: var(--red); margin-top: 8px; }
+
+.extern-qr-box { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; margin-top: 12px; }
+.extern-qr { flex: 0 0 auto; line-height: 0; }
+.extern-qr-neben { flex: 1 1 200px; min-width: 0; }
+
+/* ---------- Externe Bestellungen in der Uebersicht ---------- */
+
+.quelle-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--gold-light);
+  color: var(--gold);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+/* Die Knopfgruppe muss umbrechen duerfen: mit "Passwort zuruecksetzen" stehen
+   hier zwei Knoepfe, und .confirm-row ist eine Flex-Zeile ohne Umbruch. */
+.confirm-row { flex-wrap: wrap; }
+.confirm-row-info { min-width: 0; flex: 1 1 220px; }
+.confirm-row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
