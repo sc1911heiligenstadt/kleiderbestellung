@@ -211,17 +211,75 @@ button.btn:disabled { opacity: 0.6; cursor: default; }
 
 .katalog-gruppe { margin-bottom: 18px; }
 .katalog-gruppe:last-child { margin-bottom: 0; }
-.katalog-gruppe-titel {
+.uebersicht-gruppe { margin-bottom: 18px; }
+.uebersicht-gruppe:last-child { margin-bottom: 0; }
+
+/* ---------- Aufklappbare Felder ----------
+   Muster aus Trainerdaten (accordion-card): <details>/<summary> statt eigener
+   Toggle-Logik, der Pfeil kommt als ::before auf die <summary>.
+   .aktion-head bleibt daneben bestehen — extern.html nutzt sie weiter. */
+
+/* Bestellkarten im Tab "Meine Bestellung" */
+.card.accordion-card { padding: 0; }
+.accordion-card > summary.accordion-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  border-radius: var(--radius);
+}
+.accordion-card > summary.accordion-summary::-webkit-details-marker { display: none; }
+.accordion-card > summary.accordion-summary::marker { content: ""; }
+.accordion-card[open] > summary.accordion-summary { border-radius: var(--radius) var(--radius) 0 0; }
+.accordion-card > summary.accordion-summary::before {
+  content: "▸";
+  order: -1;
+  flex-shrink: 0;
   font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--blue);
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.accordion-card[open] > summary.accordion-summary::before { transform: rotate(90deg); }
+.accordion-card .accordion-body { padding: 0 20px 20px; }
+.accordion-summary h2 { margin-bottom: 0; }
+.aktion-kurzinfo { flex: 1 1 auto; }
+.aktion-kurzinfo.gewaehlt { color: var(--green); font-weight: 600; }
+
+/* Gruppen im Einstellungs-Tab (Artikelkatalog + Bestellungsübersicht) */
+summary.gruppen-kopf {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
   margin-bottom: 8px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--border);
 }
-.uebersicht-gruppe { margin-bottom: 18px; }
-.uebersicht-gruppe:last-child { margin-bottom: 0; }
+summary.gruppen-kopf::-webkit-details-marker { display: none; }
+summary.gruppen-kopf::marker { content: ""; }
+summary.gruppen-kopf::before {
+  content: "▸";
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 11px;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+details[open] > summary.gruppen-kopf::before { transform: rotate(90deg); }
+.gruppen-anzahl { font-size: 12px; }
+h3.katalog-gruppe-titel {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--blue);
+  margin-bottom: 0;
+}
 
 /* ---------- Meine Bestellung: Artikel-Zeilen ---------- */
 

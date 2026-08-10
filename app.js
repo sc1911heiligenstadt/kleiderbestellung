@@ -16,6 +16,25 @@ let currentMannschaften = [];
 // Aktion, deren Bestellliste im Export-Panel ausgewählt ist ("" = alle Aktionen).
 let exportAktionId = "";
 
+// Auf/zu-Zustand der aufklappbaren Felder, über die kompletten Re-Renders hinweg
+// (innerHTML baut alles neu — ohne Merker klappte nach jedem Speichern alles
+// wieder zu, gleiche Falle wie offenesExternPanel). null = der Bestell-Tab wurde
+// noch nie gerendert, der Startzustand wird dann aus der Aktionszahl bestimmt.
+let offeneBestellKarten = null;
+const offeneKatalogGruppen = new Set();
+const offeneUebersichtGruppen = new Set();
+
+// Liest den aktuellen Auf/zu-Zustand der <details data-aktion-id> eines Containers
+// in das Merker-Set zurück — unmittelbar VOR dem Neuaufbau per innerHTML. Bewusst
+// über das open-Property statt über das toggle-Event: das Event feuert asynchron
+// und wäre bei einem Rendern in derselben Task noch nicht verarbeitet.
+function sammleAufklappZustand(container, selector, set) {
+  container.querySelectorAll(selector).forEach((d) => {
+    if (d.open) set.add(d.dataset.aktionId);
+    else set.delete(d.dataset.aktionId);
+  });
+}
+
 function escapeHtml(s) {
   return String(s || "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -249,25 +268,34 @@ function renderBestellAktionCard(aktion) {
         </div>`;
       }).join("");
 
+  // Kurzinfo im Kopf: auch zugeklappt sieht man, ob hier noch etwas zu tun ist.
+  const anzahl = (mine.positionen || []).length;
+  const kurzinfo = anzahl
+    ? `<span class="muted aktion-kurzinfo gewaehlt">✓ ${anzahl} Artikel gewählt</span>`
+    : `<span class="muted aktion-kurzinfo">${bearbeitbar ? "noch nichts gewählt" : ""}</span>`;
+
   return `
-    <div class="card bestell-aktion" data-aktion-id="${escapeHtml(aktion.id)}">
-      <div class="aktion-head">
+    <details class="card bestell-aktion accordion-card" data-aktion-id="${escapeHtml(aktion.id)}"${offeneBestellKarten.has(aktion.id) ? " open" : ""}>
+      <summary class="accordion-summary">
         <h2>${escapeHtml(aktion.name)}</h2>
+        ${kurzinfo}
         <span class="aktion-status ${offen ? "offen" : "zu"}">${offen ? "läuft" : "geschlossen"}</span>
+      </summary>
+      <div class="accordion-body">
+        ${bannerHtml}
+        <p class="muted">Wähle je Artikel deine Größe (die Menge ist fest vorgegeben). Du kannst deine Bestellung jederzeit ändern, solange diese Bestellaktion läuft.</p>
+        <div class="bestellung-rows">${rowsHtml}</div>
+        <div class="form-field" style="margin-top:14px;">
+          <label>Kommentar (optional)</label>
+          <textarea class="aktion-kommentar" rows="2" placeholder="z.B. Rückfrage zur Größe" ${bearbeitbar ? "" : "disabled"}>${escapeHtml(mine.kommentar || "")}</textarea>
+        </div>
+        <p class="muted aktion-form-error" style="display:none; color:#c0392b; margin-top:10px;"></p>
+        <div class="btn-row" style="justify-content:flex-end; margin-top:16px; ${bearbeitbar ? "" : "display:none;"}">
+          <button type="button" class="btn success btn-submit-aktion">Bestellung speichern</button>
+        </div>
+        <p class="muted aktion-letzte-aenderung" style="margin-top:10px;">${mine.letzteAenderung ? "Zuletzt geändert am " + escapeHtml(fmtDate(mine.letzteAenderung)) + "." : ""}</p>
       </div>
-      ${bannerHtml}
-      <p class="muted">Wähle je Artikel deine Größe (die Menge ist fest vorgegeben). Du kannst deine Bestellung jederzeit ändern, solange diese Bestellaktion läuft.</p>
-      <div class="bestellung-rows">${rowsHtml}</div>
-      <div class="form-field" style="margin-top:14px;">
-        <label>Kommentar (optional)</label>
-        <textarea class="aktion-kommentar" rows="2" placeholder="z.B. Rückfrage zur Größe" ${bearbeitbar ? "" : "disabled"}>${escapeHtml(mine.kommentar || "")}</textarea>
-      </div>
-      <p class="muted aktion-form-error" style="display:none; color:#c0392b; margin-top:10px;"></p>
-      <div class="btn-row" style="justify-content:flex-end; margin-top:16px; ${bearbeitbar ? "" : "display:none;"}">
-        <button type="button" class="btn success btn-submit-aktion">Bestellung speichern</button>
-      </div>
-      <p class="muted aktion-letzte-aenderung" style="margin-top:10px;">${mine.letzteAenderung ? "Zuletzt geändert am " + escapeHtml(fmtDate(mine.letzteAenderung)) + "." : ""}</p>
-    </div>`;
+    </details>`;
 }
 
 function renderMeineBestellung() {
@@ -280,6 +308,14 @@ function renderMeineBestellung() {
         <div class="empty-state">Zurzeit läuft keine Bestellaktion.</div>
       </div>`;
     return;
+  }
+  // Startzustand nur beim allerersten Rendern: eine einzelne Aktion steht direkt
+  // offen da, mehrere starten zugeklappt (kompakte Übersicht). Danach entscheidet
+  // allein der Nutzer — sein Auf/zu überlebt jedes Re-Rendern.
+  if (offeneBestellKarten === null) {
+    offeneBestellKarten = new Set(aktionen.length === 1 ? [aktionen[0].id] : []);
+  } else {
+    sammleAufklappZustand(container, "details.bestell-aktion", offeneBestellKarten);
   }
   container.innerHTML = aktionen.map(renderBestellAktionCard).join("");
 }
@@ -672,9 +708,14 @@ function renderKatalogVerwaltung() {
   const hatAktionen = appData.aktionen.length > 0;
   document.getElementById("katalog-empty").style.display = hatAktionen ? "none" : "block";
   document.getElementById("katalog-neu").style.display = hatAktionen ? "" : "none";
-  document.getElementById("katalog-rows").innerHTML = appData.aktionen.map((a) => `
-    <div class="katalog-gruppe">
-      <h3 class="katalog-gruppe-titel">${escapeHtml(a.name)}</h3>
+  const katalogRows = document.getElementById("katalog-rows");
+  sammleAufklappZustand(katalogRows, "details.katalog-gruppe", offeneKatalogGruppen);
+  katalogRows.innerHTML = appData.aktionen.map((a) => `
+    <details class="katalog-gruppe" data-aktion-id="${escapeHtml(a.id)}"${offeneKatalogGruppen.has(a.id) ? " open" : ""}>
+      <summary class="gruppen-kopf">
+        <h3 class="katalog-gruppe-titel">${escapeHtml(a.name)}</h3>
+        <span class="muted gruppen-anzahl">${a.artikel.length} Artikel</span>
+      </summary>
       ${a.artikel.length
         ? a.artikel.map((art) => `
         <div class="katalog-row ${art.aktiv === false ? "inaktiv" : ""}" data-artikel-id="${escapeHtml(art.id)}" data-aktion-id="${escapeHtml(a.id)}">
@@ -693,7 +734,7 @@ function renderKatalogVerwaltung() {
           </div>
         </div>`).join("")
         : `<p class="muted">Noch keine Artikel in dieser Bestellaktion.</p>`}
-    </div>
+    </details>
   `).join("");
   document.getElementById("na-aktion").innerHTML = aktionOptionsHtml(appData.aktionen[0] && appData.aktionen[0].id);
 }
@@ -725,6 +766,14 @@ async function addArtikel() {
   document.getElementById("na-name").value = "";
   document.getElementById("na-groessen").value = "";
   document.getElementById("na-menge").value = "1";
+  // Die Zielgruppe aufklappen — sonst landet der neue Artikel unsichtbar in
+  // einer zugeklappten Gruppe und sieht aus wie nicht angelegt. Das open direkt
+  // am alten DOM setzen: das folgende Rendern sammelt den Zustand von dort ein
+  // und würde ein bloßes add() im Set gleich wieder überschreiben. Das add()
+  // deckt den Fall ab, dass die Gruppe noch gar nicht im DOM steht (neue Aktion).
+  offeneKatalogGruppen.add(aktionId);
+  const zielGruppe = document.querySelector(`#katalog-rows details.katalog-gruppe[data-aktion-id="${CSS.escape(aktionId)}"]`);
+  if (zielGruppe) zielGruppe.open = true;
   renderEinstellungen();
   renderMeineBestellung();
 }
@@ -826,7 +875,9 @@ function positionenLabel(positionen, artikelById) {
 function renderBestellungsuebersicht() {
   const mitBestellungen = appData.aktionen.filter(aktionHatBestellungen);
   document.getElementById("uebersicht-empty").style.display = mitBestellungen.length ? "none" : "block";
-  document.getElementById("uebersicht-rows").innerHTML = mitBestellungen.map((aktion) => {
+  const uebersichtRows = document.getElementById("uebersicht-rows");
+  sammleAufklappZustand(uebersichtRows, "details.uebersicht-gruppe", offeneUebersichtGruppen);
+  uebersichtRows.innerHTML = mitBestellungen.map((aktion) => {
     const artikelById = Object.fromEntries(aktion.artikel.map((a) => [a.id, a]));
     // ⚠️ Der Schlüssel ist NICHT immer ein Nutzername: bei einer Bestellung über
     // den externen Link lautet er "extern:<name>.<jahrgang>" und gehört zu
@@ -835,8 +886,11 @@ function renderBestellungsuebersicht() {
       .map(([schluessel, b]) => Object.assign({ schluessel }, b))
       .sort((a, b) => `${a.vorname} ${a.nachname}`.localeCompare(`${b.vorname} ${b.nachname}`, "de"));
     return `
-      <div class="uebersicht-gruppe">
-        <h3 class="katalog-gruppe-titel">${escapeHtml(aktion.name)}</h3>
+      <details class="uebersicht-gruppe" data-aktion-id="${escapeHtml(aktion.id)}"${offeneUebersichtGruppen.has(aktion.id) ? " open" : ""}>
+        <summary class="gruppen-kopf">
+          <h3 class="katalog-gruppe-titel">${escapeHtml(aktion.name)}</h3>
+          <span class="muted gruppen-anzahl">${rows.length} Bestellung${rows.length === 1 ? "" : "en"}</span>
+        </summary>
         ${rows.map((r) => {
           const extern = r.quelle === "extern";
           const jahrgang = extern && r.jahrgang ? ` (${escapeHtml(r.jahrgang)})` : "";
@@ -859,7 +913,7 @@ function renderBestellungsuebersicht() {
           </div>
         </div>`;
         }).join("")}
-      </div>`;
+      </details>`;
   }).join("");
 }
 

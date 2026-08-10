@@ -8,6 +8,21 @@ const EXTERN_BASIS = "https://sc1911heiligenstadt.github.io/kleiderbestellung/ex
 
 const APP_CHANGELOG = [
   {
+    version: "1.2",
+    groups: [
+      {
+        title: "Aufklappbare Bestellaktionen",
+        items: [
+          "Jede Bestellaktion — etwa Trainerpaket oder U19-Paket — ist im Reiter „Meine Bestellung“ jetzt ein aufklappbares Feld: zugeklappt bleibt nur die Kopfzeile mit Name und Status, bei mehreren Aktionen wird die Seite damit deutlich kürzer.",
+          "Die Kopfzeile zeigt schon zugeklappt, ob die eigene Bestellung steht („✓ 3 Artikel gewählt“) oder noch nichts gewählt ist.",
+          "Läuft nur eine einzige Bestellaktion, steht sie wie bisher direkt offen da.",
+          "Auch im Reiter „Einstellungen“ sind Artikelkatalog und Bestellungsübersicht je Bestellaktion aufklappbar — mit Artikel- bzw. Bestellzahl in der Kopfzeile.",
+          "Was auf- oder zugeklappt ist, bleibt beim Speichern und Aktualisieren erhalten; nach dem Anlegen eines Artikels öffnet sich seine Gruppe von selbst."
+        ]
+      }
+    ]
+  },
+  {
     version: "1.1",
     groups: [
       {
