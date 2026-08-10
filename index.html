@@ -118,7 +118,7 @@
         <div class="card-header-row">
           <h2>Artikelkatalog</h2>
         </div>
-        <p class="muted">Nach Bestellaktion gruppiert. Über das Auswahlfeld in einer Zeile lässt sich ein Artikel in eine andere Aktion verschieben — bereits abgegebene Bestellungen dieses Artikels wandern mit.</p>
+        <p class="muted">Nach Bestellaktion gruppiert. Über das Auswahlfeld in einer Zeile lässt sich ein Artikel in eine andere Aktion verschieben — bereits abgegebene Bestellungen dieses Artikels wandern mit. Standardmenge <strong>0</strong> bedeutet: die Menge ist nicht vorgegeben, wer bestellt, trägt sie selbst ein.</p>
         <p class="muted" id="katalog-error" style="display:none; color:#c0392b;"></p>
         <div class="empty-state" id="katalog-empty" style="display:none;">Erst eine Bestellaktion anlegen, dann lassen sich Artikel hinzufügen.</div>
         <div id="katalog-rows"></div>
@@ -128,7 +128,7 @@
             <div class="form-field"><label>Bestellaktion</label><select id="na-aktion"></select></div>
             <div class="form-field"><label>Name</label><input type="text" id="na-name" placeholder="z.B. Trainingsjacke" /></div>
             <div class="form-field"><label>Größen (Komma-getrennt)</label><input type="text" id="na-groessen" placeholder="z.B. XS, S, M, L, XL, XXL" /></div>
-            <div class="form-field"><label>Standardmenge</label><input type="number" id="na-menge" min="1" step="1" value="1" /></div>
+            <div class="form-field"><label>Standardmenge (0 = frei wählbar)</label><input type="number" id="na-menge" min="0" step="1" value="1" title="0 bedeutet: die Menge wählt der Besteller selbst" /></div>
           </div>
           <div class="btn-row" style="justify-content:flex-start;">
             <button type="button" class="btn secondary" id="btn-add-artikel">+ Artikel hinzufügen</button>
@@ -167,12 +167,12 @@
 <!-- Druckbereich (nur für PDF-Export sichtbar) -->
 <div id="print-area"><div id="print-content"></div></div>
 
-<script src="config.js?v=1.9"></script>
+<script src="config.js?v=2.0"></script>
 <script src="db.js?v=1.2"></script>
 <!-- Selbstgeschriebener QR-Encoder, byte-genau aus dem Kadermanager übernommen
      (dort gegen die Referenzimplementierung segno verifiziert). Kein CDN: der
      Token im Link würde sonst bei jedem Aufruf an einen fremden Server gemeldet. -->
 <script src="qrcode.js?v=1.0"></script>
-<script src="app.js?v=1.9"></script>
+<script src="app.js?v=2.0"></script>
 </body>
 </html>

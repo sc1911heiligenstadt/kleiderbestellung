@@ -8,6 +8,20 @@ const EXTERN_BASIS = "https://sc1911heiligenstadt.github.io/kleiderbestellung/ex
 
 const APP_CHANGELOG = [
   {
+    version: "1.3",
+    groups: [
+      {
+        title: "Frei wählbare Menge je Artikel",
+        items: [
+          "Neu im Artikelkatalog: die Standardmenge 0. Sie bedeutet, dass die Menge nicht vorgegeben ist — wer bestellt, trägt sie selbst ein (mindestens 1).",
+          "Das gilt im Reiter „Meine Bestellung“ genauso wie auf der Bestellseite für Spieler über den Link.",
+          "Wird eine Größe gewählt, aber keine Menge eingetragen, sagt die Seite Bescheid statt die Zeile still wegzulassen.",
+          "Bei allen anderen Artikeln bleibt alles wie gehabt: die Menge kommt fest aus dem Katalog und lässt sich beim Bestellen nicht ändern."
+        ]
+      }
+    ]
+  },
+  {
     version: "1.2",
     groups: [
       {

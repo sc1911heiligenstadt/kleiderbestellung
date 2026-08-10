@@ -202,22 +202,31 @@ function renderBestellung() {
 
   const gewaehlt = {};
   for (const p of ((bestehendeBestellung && bestehendeBestellung.positionen) || [])) {
-    gewaehlt[p.artikelId] = p.groesse;
+    gewaehlt[p.artikelId] = p;
   }
 
   const rows = el("b-rows");
   if (!aktion.artikel.length) {
     rows.innerHTML = `<div class="empty-state">In dieser Bestellaktion stehen noch keine Artikel.</div>`;
   } else {
-    rows.innerHTML = aktion.artikel.map((a) => `
-      <div class="bestell-row" data-artikel-id="${escapeHtml(a.id)}">
+    rows.innerHTML = aktion.artikel.map((a) => {
+      const pos = gewaehlt[a.id];
+      // menge 0 vom Worker heißt: die Menge ist nicht vorgegeben, der Besteller
+      // wählt sie selbst — nur dann ist das Feld editierbar. Ein älterer Worker
+      // liefert nie 0, dann bleibt alles wie bisher.
+      const frei = a.menge === 0;
+      const menge = frei ? (pos && pos.menge > 0 ? pos.menge : 1) : a.menge;
+      const titel = frei ? "Bei diesem Artikel wählst du die Menge selbst." : "Die Menge ist je Artikel fest vom Verein vorgegeben.";
+      return `
+      <div class="bestell-row" data-artikel-id="${escapeHtml(a.id)}" ${frei ? 'data-menge-frei="1"' : ""}>
         <span class="bestell-artikel-name">${escapeHtml(a.name)}</span>
         <select class="bestell-groesse" ${aktion.offen ? "" : "disabled"}>
           <option value="">— keine Auswahl —</option>
-          ${a.groessen.map((g) => `<option value="${escapeHtml(g)}" ${g === gewaehlt[a.id] ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
+          ${a.groessen.map((g) => `<option value="${escapeHtml(g)}" ${pos && g === pos.groesse ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
         </select>
-        <input type="number" class="bestell-menge" value="${escapeHtml(a.menge)}" disabled title="Die Menge ist je Artikel fest vom Verein vorgegeben." />
-      </div>`).join("");
+        <input type="number" class="bestell-menge" min="1" step="1" value="${escapeHtml(menge)}" ${frei && aktion.offen ? "" : "disabled"} title="${escapeHtml(titel)}" />
+      </div>`;
+    }).join("");
   }
 
   const komm = el("b-kommentar");
@@ -241,14 +250,40 @@ function sammlePositionen() {
   const positionen = [];
   el("b-rows").querySelectorAll(".bestell-row").forEach((row) => {
     const groesse = row.querySelector(".bestell-groesse").value;
-    if (groesse) positionen.push({ artikelId: row.dataset.artikelId, groesse });
+    if (!groesse) return;
+    const eintrag = { artikelId: row.dataset.artikelId, groesse };
+    // Nur bei freigegebener Menge (Standardmenge 0) geht die eigene Wahl mit —
+    // bei allen anderen setzt der Worker ohnehin die Katalogmenge.
+    if (row.dataset.mengeFrei) {
+      eintrag.menge = Math.floor(Number(row.querySelector(".bestell-menge").value));
+    }
+    positionen.push(eintrag);
   });
   return positionen;
+}
+
+// Zeile mit gewählter Größe, aber ohne brauchbare selbstgewählte Menge — der
+// Worker würde sie kommentarlos weglassen; besser vorher benennen.
+function findeZeileOhneMenge() {
+  for (const row of el("b-rows").querySelectorAll('.bestell-row[data-menge-frei]')) {
+    if (!row.querySelector(".bestell-groesse").value) continue;
+    const menge = Math.floor(Number(row.querySelector(".bestell-menge").value));
+    if (!Number.isFinite(menge) || menge < 1) {
+      return row.querySelector(".bestell-artikel-name").textContent;
+    }
+  }
+  return null;
 }
 
 async function absenden() {
   meldung("b-fehler", "");
   if (!aktion.offen) return;
+
+  const ohneMenge = findeZeileOhneMenge();
+  if (ohneMenge) {
+    meldung("b-fehler", `Bitte trag bei „${ohneMenge}“ eine Menge von mindestens 1 ein — oder stell die Größe auf „keine Auswahl“ zurück.`);
+    return;
+  }
 
   const positionen = sammlePositionen();
   const kommentar = el("b-kommentar").value.trim();

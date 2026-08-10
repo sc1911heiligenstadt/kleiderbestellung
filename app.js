@@ -255,7 +255,16 @@ function renderBestellAktionCard(aktion) {
     : aktiveArtikel.map((a) => {
         const pos = mine.positionen.find((p) => p.artikelId === a.id);
         const groesse = pos ? pos.groesse : "";
-        const menge = a.standardMenge || 1;
+        // Standardmenge 0 = die Menge ist nicht vorgegeben, der Besteller wählt
+        // sie selbst — nur dann ist das Feld editierbar. Sonst zeigt es fest die
+        // Katalogmenge (auch wenn eine alte Position anders lautet: der Katalog
+        // ist die Wahrheit, gespeichert wird beim nächsten Sichern seine Menge).
+        const mengeFrei = istMengeFrei(a);
+        const menge = mengeFrei ? (pos && pos.menge > 0 ? pos.menge : 1) : (a.standardMenge || 1);
+        const mengeEditierbar = mengeFrei && bearbeitbar;
+        const mengeTitle = mengeFrei
+          ? "Bei diesem Artikel wählst du die Menge selbst."
+          : "Die Menge ist je Artikel fest vom Verein vorgegeben.";
         const inaktivLabel = a.aktiv === false ? " (nicht mehr bestellbar)" : "";
         return `
         <div class="bestell-row" data-artikel-id="${escapeHtml(a.id)}">
@@ -264,7 +273,7 @@ function renderBestellAktionCard(aktion) {
             <option value="">— keine Auswahl —</option>
             ${(a.groessen || []).map((g) => `<option value="${escapeHtml(g)}" ${g === groesse ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
           </select>
-          <input type="number" class="bestell-menge" min="1" step="1" value="${escapeHtml(menge)}" placeholder="Menge" disabled title="Die Menge ist je Artikel fest vom Verein vorgegeben." />
+          <input type="number" class="bestell-menge" min="1" step="1" value="${escapeHtml(menge)}" placeholder="Menge" ${mengeEditierbar ? "" : "disabled"} title="${escapeHtml(mengeTitle)}" />
         </div>`;
       }).join("");
 
@@ -283,7 +292,9 @@ function renderBestellAktionCard(aktion) {
       </summary>
       <div class="accordion-body">
         ${bannerHtml}
-        <p class="muted">Wähle je Artikel deine Größe (die Menge ist fest vorgegeben). Du kannst deine Bestellung jederzeit ändern, solange diese Bestellaktion läuft.</p>
+        <p class="muted">${aktiveArtikel.some(istMengeFrei)
+          ? "Wähle je Artikel deine Größe — bei einigen Artikeln trägst du auch die Menge selbst ein, sonst ist sie fest vorgegeben."
+          : "Wähle je Artikel deine Größe (die Menge ist fest vorgegeben)."} Du kannst deine Bestellung jederzeit ändern, solange diese Bestellaktion läuft.</p>
         <div class="bestellung-rows">${rowsHtml}</div>
         <div class="form-field" style="margin-top:14px;">
           <label>Kommentar (optional)</label>
@@ -320,15 +331,44 @@ function renderMeineBestellung() {
   container.innerHTML = aktionen.map(renderBestellAktionCard).join("");
 }
 
+// Standardmenge 0 heißt: die Menge gibt nicht der Verein vor, der Besteller
+// wählt sie selbst (Michel-Vorgabe 2026-08-10). Nur eine ausdrückliche 0 —
+// fehlend/leer bleibt die feste 1, sonst würde ein Altbestand ohne Feld frei.
+function istMengeFrei(artikel) {
+  if (!artikel || artikel.standardMenge === null || artikel.standardMenge === undefined) return false;
+  if (String(artikel.standardMenge).trim() === "") return false;
+  return Math.floor(Number(artikel.standardMenge)) === 0;
+}
+
 function collectPositionenFromCard(card) {
+  const aktion = findAktion(card.dataset.aktionId);
   const positionen = [];
   card.querySelectorAll(".bestell-row").forEach((row) => {
     const artikelId = row.dataset.artikelId;
     const groesse = row.querySelector(".bestell-groesse").value;
-    const menge = Number(row.querySelector(".bestell-menge").value);
-    if (groesse && menge > 0) positionen.push({ artikelId, groesse, menge });
+    if (!groesse) return;
+    const artikel = aktion && aktion.artikel.find((a) => a.id === artikelId);
+    // Die Menge kommt aus dem Katalog, nicht aus dem (gesperrten) Feld — nur
+    // bei Standardmenge 0 zählt die Eingabe des Bestellers.
+    const menge = istMengeFrei(artikel)
+      ? Math.floor(Number(row.querySelector(".bestell-menge").value))
+      : ((artikel && artikel.standardMenge) || 1);
+    if (menge > 0) positionen.push({ artikelId, groesse, menge });
   });
   return positionen;
+}
+
+// Zeile mit gewählter Größe, aber ohne brauchbare selbstgewählte Menge — die
+// würde beim Speichern stillschweigend wegfallen; stattdessen wird sie benannt.
+function findeZeileOhneMenge(card, aktion) {
+  for (const row of card.querySelectorAll(".bestell-row")) {
+    const artikel = aktion.artikel.find((a) => a.id === row.dataset.artikelId);
+    if (!istMengeFrei(artikel)) continue;
+    if (!row.querySelector(".bestell-groesse").value) continue;
+    const menge = Math.floor(Number(row.querySelector(".bestell-menge").value));
+    if (!Number.isFinite(menge) || menge < 1) return artikel;
+  }
+  return null;
 }
 
 async function submitBestellung(aktionId) {
@@ -337,6 +377,12 @@ async function submitBestellung(aktionId) {
   const card = document.querySelector(`.bestell-aktion[data-aktion-id="${CSS.escape(aktionId)}"]`);
   if (!card) return;
   showAktionError(aktionId, "");
+
+  const ohneMenge = findeZeileOhneMenge(card, aktion);
+  if (ohneMenge) {
+    showAktionError(aktionId, `Bitte für „${ohneMenge.name}“ eine Menge von mindestens 1 eintragen — oder die Größe auf „keine Auswahl“ zurücksetzen.`);
+    return;
+  }
 
   const positionen = collectPositionenFromCard(card);
   const kommentar = card.querySelector(".aktion-kommentar").value.trim();
@@ -699,6 +745,18 @@ function istArtikelInBestellungVerwendet(aktion, artikelId) {
     (b.positionen || []).some((p) => p.artikelId === artikelId));
 }
 
+// Liest das Standardmengen-Feld der Katalogpflege. Eine ausdrückliche 0 gibt
+// die Menge frei (der Besteller wählt selbst); leer oder Unlesbares fällt auf
+// die feste 1 zurück. ⚠️ Bewusst KEIN `Number(...) || 1` — das machte aus der
+// gewollten 0 eine 1, weil 0 falsy ist.
+function parseStandardMenge(rohText) {
+  const s = String(rohText == null ? "" : rohText).trim();
+  if (s === "") return 1;
+  const n = Math.floor(Number(s));
+  if (!Number.isFinite(n) || n < 0) return 1;
+  return n;
+}
+
 function aktionOptionsHtml(selectedId) {
   return appData.aktionen.map((a) =>
     `<option value="${escapeHtml(a.id)}" ${a.id === selectedId ? "selected" : ""}>${escapeHtml(a.name)}</option>`).join("");
@@ -722,7 +780,7 @@ function renderKatalogVerwaltung() {
           <div class="katalog-row-main">
             <input type="text" class="katalog-name" value="${escapeHtml(art.name)}" />
             <input type="text" class="katalog-groessen" value="${escapeHtml((art.groessen || []).join(", "))}" />
-            <input type="number" class="katalog-menge" min="1" step="1" value="${escapeHtml(art.standardMenge || 1)}" title="Standardmenge" />
+            <input type="number" class="katalog-menge" min="0" step="1" value="${escapeHtml(istMengeFrei(art) ? 0 : (art.standardMenge || 1))}" title="Standardmenge — 0 bedeutet: die Menge wählt der Besteller selbst" />
             <select class="katalog-aktion" title="Zu welcher Bestellaktion gehört der Artikel?">${aktionOptionsHtml(a.id)}</select>
           </div>
           <div class="katalog-row-actions">
@@ -745,7 +803,7 @@ async function addArtikel() {
   const aktionId = document.getElementById("na-aktion").value;
   const name = document.getElementById("na-name").value.trim();
   const groessenRaw = document.getElementById("na-groessen").value.trim();
-  const standardMenge = Number(document.getElementById("na-menge").value) || 1;
+  const standardMenge = parseStandardMenge(document.getElementById("na-menge").value);
   if (!findAktion(aktionId)) { showKatalogError("Bitte eine Bestellaktion auswählen."); return; }
   if (!name) { showKatalogError("Bitte einen Namen eingeben."); return; }
   const groessen = groessenRaw.split(",").map((s) => s.trim()).filter(Boolean);
@@ -1160,7 +1218,7 @@ async function init() {
     if (e.target.closest(".btn-save-artikel")) {
       const name = row.querySelector(".katalog-name").value.trim();
       const groessen = row.querySelector(".katalog-groessen").value.split(",").map((s) => s.trim()).filter(Boolean);
-      const standardMenge = Number(row.querySelector(".katalog-menge").value) || 1;
+      const standardMenge = parseStandardMenge(row.querySelector(".katalog-menge").value);
       const aktiv = row.querySelector(".katalog-aktiv").checked;
       const neueAktionId = row.querySelector(".katalog-aktion").value;
       if (!name || !groessen.length) { showKatalogError("Name und mindestens eine Größe erforderlich."); return; }
