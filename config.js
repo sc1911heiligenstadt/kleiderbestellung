@@ -8,6 +8,19 @@ const EXTERN_BASIS = "https://sc1911heiligenstadt.github.io/kleiderbestellung/ex
 
 const APP_CHANGELOG = [
   {
+    version: "1.4",
+    groups: [
+      {
+        title: "Hinweistext je Bestellaktion",
+        items: [
+          "Jede Bestellaktion kann jetzt einen Freitext tragen — zum Beispiel „Von jedem Teil ist das erste kostenfrei, jedes weitere zahlt ihr selbst“ oder was sonst zur Aktion zu sagen ist.",
+          "Gepflegt wird der Text im Reiter „Einstellungen“ direkt bei der Bestellaktion; Zeilenumbrüche bleiben erhalten.",
+          "Zu lesen ist er vorn im Bestellformular über den Artikeln — im Reiter „Meine Bestellung“ genauso wie auf der Bestellseite für Spieler über den Link."
+        ]
+      }
+    ]
+  },
+  {
     version: "1.3",
     groups: [
       {

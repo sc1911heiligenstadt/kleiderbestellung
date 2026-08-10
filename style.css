@@ -209,6 +209,31 @@ button.btn:disabled { opacity: 0.6; cursor: default; }
 .aktion-row-meta { font-size: 12px; }
 .aktion-row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
+/* Freitext je Bestellaktion: Pflege-Feld in der Verwaltungszeile ... */
+.aktion-row-main .aktion-hinweis-feld {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+  resize: vertical;
+}
+/* ... und die Anzeige im Bestellformular, über den Artikeln. pre-line erhält
+   die Zeilenumbrüche des Freitexts, ohne dass HTML nötig wäre. */
+.aktion-hinweis {
+  background: var(--blue-light);
+  border: 1px solid #c7d8f2;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.bestell-aktion .aktion-hinweis { margin-top: 0; }
+
 .katalog-gruppe { margin-bottom: 18px; }
 .katalog-gruppe:last-child { margin-bottom: 0; }
 .uebersicht-gruppe { margin-bottom: 18px; }

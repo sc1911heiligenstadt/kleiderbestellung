@@ -83,6 +83,7 @@ function normalizeAktion(a, index) {
   if (typeof x.id !== "string" || !x.id) x.id = "aktion-" + (index + 1);
   if (typeof x.name !== "string" || !x.name.trim()) x.name = "Bestellaktion " + (index + 1);
   if (typeof x.offen !== "boolean") x.offen = true;
+  if (typeof x.hinweis !== "string") x.hinweis = "";
   if (!Array.isArray(x.artikel)) x.artikel = [];
   if (!x.bestellungen || typeof x.bestellungen !== "object") x.bestellungen = {};
   for (const b of Object.values(x.bestellungen)) {
@@ -292,6 +293,7 @@ function renderBestellAktionCard(aktion) {
       </summary>
       <div class="accordion-body">
         ${bannerHtml}
+        ${(aktion.hinweis || "").trim() ? `<div class="aktion-hinweis">${escapeHtml(aktion.hinweis.trim())}</div>` : ""}
         <p class="muted">${aktiveArtikel.some(istMengeFrei)
           ? "Wähle je Artikel deine Größe — bei einigen Artikeln trägst du auch die Menge selbst ein, sonst ist sie fest vorgegeben."
           : "Wähle je Artikel deine Größe (die Menge ist fest vorgegeben)."} Du kannst deine Bestellung jederzeit ändern, solange diese Bestellaktion läuft.</p>
@@ -454,6 +456,7 @@ function renderAktionenVerwaltung() {
       <div class="aktion-row ${offen ? "" : "zu"}">
         <div class="aktion-row-main">
           <input type="text" class="aktion-name" value="${escapeHtml(a.name)}" />
+          <textarea class="aktion-hinweis-feld" rows="2" placeholder="Hinweis für die Bestellenden (optional) — steht im Bestellformular über den Artikeln, z.B. zur Kostenübernahme">${escapeHtml(a.hinweis || "")}</textarea>
           <span class="muted aktion-row-meta">${a.artikel.length} Artikel · ${anzahl} Bestellung${anzahl === 1 ? "" : "en"}${externMeta} · ${offen ? "läuft" : "geschlossen"}</span>
         </div>
         <div class="aktion-row-actions">
@@ -1189,8 +1192,9 @@ async function init() {
     const aktionId = wrap.dataset.aktionId;
     if (e.target.closest(".btn-save-aktion")) {
       const name = wrap.querySelector(".aktion-name").value.trim();
+      const hinweis = wrap.querySelector(".aktion-hinweis-feld").value.trim();
       if (!name) { showAktionenError("Der Name darf nicht leer sein."); return; }
-      updateAktion(aktionId, { name });
+      updateAktion(aktionId, { name, hinweis });
     } else if (e.target.closest(".btn-extern-aktion")) {
       showAktionenError("");
       offenesExternPanel = (offenesExternPanel === aktionId) ? null : aktionId;

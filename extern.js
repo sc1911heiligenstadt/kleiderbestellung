@@ -200,6 +200,13 @@ function renderBestellung() {
     banner.style.display = "block";
   }
 
+  // Freitext der Verwaltung (z.B. Kostenregelung). textContent + pre-line im
+  // CSS: Umbrüche bleiben, HTML kann nicht hinein. Ein älterer Worker liefert
+  // das Feld nicht — dann bleibt die Box einfach weg.
+  const hinweis = String(aktion.hinweis || "").trim();
+  el("b-hinweis").textContent = hinweis;
+  el("b-hinweis").style.display = hinweis ? "block" : "none";
+
   const gewaehlt = {};
   for (const p of ((bestehendeBestellung && bestehendeBestellung.positionen) || [])) {
     gewaehlt[p.artikelId] = p;
