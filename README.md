@@ -1,20 +1,42 @@
 # 👕 Kleiderbestellung
 
-Trainer:innen bestellen Vereinskleidung/-ausrüstung mit ihrer Größe aus einem Artikelkatalog; Admin verwaltet Katalog und Bestellfenster und exportiert eine Lieferanten-Bestellliste.
+Vereinskleidung und Ausrüstung aus einem **Artikelkatalog** bestellen — jede:r
+mit der eigenen Größe. Die Verwaltung öffnet dafür eine **Bestellaktion**, sieht
+am Ende die gesammelte Übersicht und exportiert daraus die Bestellliste für den
+Lieferanten.
 
 **➡️ [Kleiderbestellung öffnen](https://sc1911heiligenstadt.github.io/kleiderbestellung/)**
 
+## Seiten
+
+| Seite | Wofür |
+|---|---|
+| [Kleiderbestellung](https://sc1911heiligenstadt.github.io/kleiderbestellung/) | Die eigene Bestellung abgeben; Verwaltung von Katalog und Bestellaktionen |
+| [Bestellung für Spieler](https://sc1911heiligenstadt.github.io/kleiderbestellung/extern.html) | Für Spieler und Eltern **ohne Vereinskonto** — über einen persönlichen Link, ganz ohne Anmeldung |
+
+## Wie es gedacht ist
+
+1. Die Verwaltung pflegt den **Artikelkatalog** und öffnet eine
+   **Bestellaktion** mit Zeitraum.
+2. Wer bestellen will, wählt Artikel und Größe unter **Meine Bestellung**.
+   Spieler und Eltern ohne Konto bekommen dafür einen eigenen Link.
+3. Nach Ablauf steht die **Bestellungsübersicht**, und der **Export** liefert
+   die Liste für den Lieferanten.
+
+Liegt für eine Person schon eine Bestellung vor, sagt die Seite das — statt
+stillschweigend eine zweite anzulegen.
+
+## Wichtig: nicht die Kleiderbörse
+
+Hier wird **neue** Vereinskleidung bestellt. **Gebrauchte** Kleidung geben
+Familien über die
+[Kleiderbörse](https://sc1911heiligenstadt.github.io/kleiderboerse/) weiter.
+
 ## Zugang
 
-Die Anmeldung läuft über die [Tools-Übersicht](https://sc1911heiligenstadt.github.io/ToolsUebersicht/) — dort einmal anmelden, danach ist dieses Werkzeug offen.
+Die Anmeldung läuft über die [Tools-Übersicht](https://sc1911heiligenstadt.github.io/ToolsUebersicht/) — dort einmal anmelden, danach ist dieses Werkzeug offen. Die Spieler-Seite braucht **keine Anmeldung**, sondern nur den persönlichen Link.
 
-Die Rechte gelten in drei Stufen: **Sehen** (nur ansehen), **Bearbeiten** (Einträge pflegen) und **Administrieren** (Einstellungen und Verwaltung). Wer welche Stufe hat, legt die Tools-Übersicht fest.
-
-## Bestellen ohne Vereinskonto
-
-Spieler haben kein Konto in der Tools-Übersicht. Für sie lässt sich je Bestellaktion ein eigener Link erzeugen — als QR-Code zum Zeigen oder zum Verschicken. Wer ihn öffnet, trägt Vorname, Nachname und Geburtsjahr ein, wählt seine Größen und vergibt dabei ein eigenes Passwort; damit kommt er später über denselben Link wieder an seine Bestellung.
-
-Zu finden unter **Einstellungen → Bestellaktionen → 🔗 Link für Spieler**. Der Link lässt sich jederzeit zurückziehen; bereits abgegebene Bestellungen bleiben davon unberührt.
+Die Rechte gelten in drei Stufen: **Sehen** (den Artikelkatalog und die eigene Bestellung ansehen), **Bearbeiten** (die eigene Bestellung abgeben und ändern, solange das Bestellfenster offen ist) und **Administrieren** (Reiter *Einstellungen*: Artikelkatalog und Bestellaktionen pflegen, Bestellungsübersicht und Export). Wer welche Stufe hat, legt die Tools-Übersicht fest.
 
 ## Lokal starten
 
@@ -23,6 +45,9 @@ Zu finden unter **Einstellungen → Bestellaktionen → 🔗 Link für Spieler**
 ## Technik
 
 Vanilla JavaScript ohne Build-Schritt — die Dateien werden so ausgeliefert, wie sie im Repo liegen. Veröffentlicht über GitHub Pages. Die Daten liegen in der Vereins-Nextcloud; der Zugriff läuft ausschließlich über den Login-Worker der Tools-Übersicht, nie mit Zugangsdaten im Browser.
+
+Die Spieler-Seite schreibt **ohne Login** — sie kennt dafür eng zugeschnittene
+Aktionen im Worker und trägt ihre eigene Datenschutz-Information nach Art. 13 DSGVO.
 
 ---
 
