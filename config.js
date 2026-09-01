@@ -8,6 +8,19 @@ const EXTERN_BASIS = "https://sc1911heiligenstadt.github.io/kleiderbestellung/ex
 
 const APP_CHANGELOG = [
   {
+    version: "1.7",
+    groups: [
+      {
+        title: "Kürzel einer Bestellaktion bei eingefügtem Namen",
+        items: [
+          "Ein „ö“ kann als ein Zeichen oder als „o“ mit einem getrennten Pünktchen-Zeichen gespeichert sein — auf dem Bildschirm sieht beides gleich aus.",
+          "Beim Kürzel für eine Bestellaktion wurde nur die erste Art umgeschrieben. Aus einem eingefügten „Größe S“ wurde „gro-e-s“ statt „groesse-s“.",
+          "Jetzt werden beide Arten gleich behandelt. Bestehende Kürzel bleiben, wie sie sind."
+        ]
+      }
+    ]
+  },
+  {
     version: "1.6",
     groups: [
       {

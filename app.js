@@ -424,8 +424,11 @@ async function submitBestellung(aktionId) {
 
 // ---------- Tab "Einstellungen": Bestellaktionen ----------
 
+// ⚠️ normalize("NFC") vor der Umlaut-Ersetzung: ein „ü" kann ein Zeichen sein
+// (U+00FC) oder „u" + Trema (U+0308). Ohne das bliebe das Trema stehen, fiele in
+// die [^a-z0-9]-Ersetzung und aus „mueller" wuerde „mu-ller".
 function slugify(name, vergeben) {
-  const base = name.trim().toLowerCase()
+  const base = name.trim().normalize("NFC").toLowerCase()
     .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   const stem = base || "eintrag";
