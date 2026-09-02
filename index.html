@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>👕 Kleiderbestellung</title>
+<meta name="theme-color" content="#1a56a0" />
+<link rel="stylesheet" href="style.css?v=1.0" />
+</head>
+<body>
+
+<header>
+  <h1>👕 Kleiderbestellung</h1>
+  <a href="https://sc1911heiligenstadt.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a>
+  <div class="header-right">
+    <span class="header-user" id="header-user"></span>
+    <img class="header-logo" src="https://sc1911heiligenstadt.github.io/logo.svg" alt="1. SC 1911 Heiligenstadt e.V." />
+  </div>
+</header>
+
+<!-- Verbindungs-Screen -->
+<div class="connect-screen" id="connect-screen">
+  <div class="card" id="cloud-login-section">
+    <h2>Anmeldung erforderlich</h2>
+    <p class="muted">
+      Der Artikelkatalog und deine Bestellung liegen in der Vereins-Nextcloud.
+      Melde dich einmalig in der <strong>Tools-Übersicht</strong> an – danach wird
+      diese Seite automatisch geladen, ganz ohne Zugangsdaten oder App-Passwort auf
+      diesem Gerät. Funktioniert auch mobil.
+    </p>
+    <div class="btn-row" style="justify-content:flex-start;">
+      <a class="btn" href="https://sc1911heiligenstadt.github.io/ToolsUebersicht/">Zur Tools-Übersicht &amp; anmelden</a>
+    </div>
+    <p class="muted" id="cloud-error" style="display:none; color:#c0392b; margin-top:12px;"></p>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app-shell" style="display:none;">
+  <nav>
+    <button data-tab="bestellung" class="active">Meine Bestellung</button>
+    <div class="nav-right">
+      <button data-tab="einstellungen" id="nav-einstellungen" style="display:none;">Einstellungen</button>
+      <button data-tab="info">Info</button>
+    </div>
+  </nav>
+  <main>
+
+    <section class="tab-section active" id="tab-bestellung">
+
+      <!-- Je laufender Bestellaktion (Trainerpaket, Spielerpaket, ...) eine eigene
+           Karte mit eigenen Artikeln, eigenem Kommentar und eigenem Speichern-Knopf. -->
+      <div id="bestellung-aktionen"></div>
+
+      <div class="card">
+        <h3>Konto</h3>
+        <div class="btn-row" style="justify-content:flex-start;">
+          <a class="btn secondary small" href="https://sc1911heiligenstadt.github.io/ToolsUebersicht/">Zur Tools-Übersicht (an-/abmelden)</a>
+        </div>
+      </div>
+
+
+    </section>
+
+    <!-- ---------- Info ---------- -->
+    <section class="tab-section" id="tab-info">
+      <div class="card">
+        <h2>Über die Kleiderbestellung <span class="version-badge" id="version-badge-2"></span></h2>
+        <p class="muted">
+            Vereinskleidung und Ausrüstung aus einem Artikelkatalog bestellen — jede:r mit der
+            eigenen Größe. Die Verwaltung öffnet dafür eine Bestellaktion und schließt sie wieder; danach steht
+            die gesammelte Übersicht und der Export liefert die Bestellliste für den Lieferanten.
+            Spieler und Eltern ohne Vereinskonto bestellen über einen eigenen persönlichen Link.
+            Gebrauchte Kleidung läuft dagegen über die Kleiderbörse.
+          </p>
+      </div>
+      <div class="card">
+        <h2>Änderungen</h2>
+        <div id="changelog-list"></div>
+      </div>
+    
+      <div class="card" id="ds-info-karte">
+        <h2>Datenschutz</h2>
+        <p>Dieses Werkzeug gehört zu den internen Anwendungen des
+        1. SC 1911 Heiligenstadt. Die hier erfassten Daten werden
+        ausschließlich für die Vereinsarbeit verwendet und liegen auf Servern
+        in Deutschland, die ein Auftragsverarbeiter für den Verein betreibt.
+        Eine Weitergabe an Dritte findet nur statt, soweit sie für den
+        jeweiligen Zweck erforderlich oder gesetzlich vorgeschrieben ist.</p>
+        <p>Verantwortlich ist der 1. SC 1911 Heiligenstadt, Leineberg 2,
+        37308 Heilbad Heiligenstadt, Telefon 03606 612206,
+        <a href="mailto:info@sc1911-heiligenstadt.de">info@sc1911-heiligenstadt.de</a>.
+        Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung,
+        Datenübertragbarkeit und Widerspruch lassen sich unter dieser
+        Anschrift geltend machen. Beschwerden nimmt der Thüringer
+        Landesbeauftragte für den Datenschutz und die Informationsfreiheit
+        entgegen.</p>
+        <p><a href="https://www.sc1911-heiligenstadt.de/datenschutz/" target="_blank" rel="noopener">Datenschutzerklärung des Vereins</a>
+        &middot;
+        <a href="https://www.sc1911-heiligenstadt.de/impressum-2/" target="_blank" rel="noopener">Impressum</a></p>
+      </div>
+</section>
+
+    <section class="tab-section" id="tab-einstellungen">
+
+      <div class="card">
+        <div class="card-header-row">
+          <h2>Bestellaktionen</h2>
+        </div>
+        <p class="muted">Jede Bestellaktion — etwa Trainerpaket oder Spielerpaket — hat ihre eigenen Artikel, ihre eigenen Bestellungen und ihr eigenes Bestellfenster. Geschlossene Aktionen sehen nur noch die, die dort bestellt haben.</p>
+        <p class="muted" id="aktionen-error" style="display:none; color:#c0392b;"></p>
+        <div class="empty-state" id="aktionen-empty" style="display:none;">Noch keine Bestellaktion angelegt.</div>
+        <div id="aktionen-rows"></div>
+        <h3 style="margin-top:18px;">Neue Bestellaktion</h3>
+        <div class="form-grid">
+          <div class="form-field"><label>Name</label><input type="text" id="nb-name" placeholder="z.B. Trainerpaket" /></div>
+        </div>
+        <div class="btn-row" style="justify-content:flex-start;">
+          <button type="button" class="btn secondary" id="btn-add-aktion">+ Bestellaktion anlegen</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header-row">
+          <h2>Artikelkatalog</h2>
+        </div>
+        <p class="muted">Nach Bestellaktion gruppiert. Über das Auswahlfeld in einer Zeile lässt sich ein Artikel in eine andere Aktion verschieben — bereits abgegebene Bestellungen dieses Artikels wandern mit. Standardmenge <strong>0</strong> bedeutet: die Menge ist nicht vorgegeben, wer bestellt, trägt sie selbst ein.</p>
+        <p class="muted" id="katalog-error" style="display:none; color:#c0392b;"></p>
+        <div class="empty-state" id="katalog-empty" style="display:none;">Erst eine Bestellaktion anlegen, dann lassen sich Artikel hinzufügen.</div>
+        <div id="katalog-rows"></div>
+        <div id="katalog-neu">
+          <h3 style="margin-top:18px;">Neuer Artikel</h3>
+          <div class="form-grid">
+            <div class="form-field"><label>Bestellaktion</label><select id="na-aktion"></select></div>
+            <div class="form-field"><label>Name</label><input type="text" id="na-name" placeholder="z.B. Trainingsjacke" /></div>
+            <div class="form-field"><label>Größen (Komma-getrennt)</label><input type="text" id="na-groessen" placeholder="z.B. XS, S, M, L, XL, XXL" /></div>
+            <div class="form-field"><label>Standardmenge (0 = frei wählbar)</label><input type="number" id="na-menge" min="0" step="1" value="1" title="0 bedeutet: die Menge wählt der Besteller selbst" /></div>
+          </div>
+          <div class="btn-row" style="justify-content:flex-start;">
+            <button type="button" class="btn secondary" id="btn-add-artikel">+ Artikel hinzufügen</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header-row">
+          <h2>Bestellungsübersicht</h2>
+        </div>
+        <p class="muted" id="uebersicht-error" style="display:none; color:#c0392b;"></p>
+        <div class="empty-state" id="uebersicht-empty" style="display:none;">Noch keine Bestellungen abgegeben.</div>
+        <div id="uebersicht-rows"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header-row">
+          <h2>Export</h2>
+        </div>
+        <p class="muted">Zusammenfassung der Bestellungen, gruppiert nach Artikel und Größe — z.B. zum Weiterreichen an einen Lieferanten. Wähle eine einzelne Bestellaktion oder alle zusammen (dann steht jede Aktion in einem eigenen Abschnitt).</p>
+        <div class="form-grid">
+          <div class="form-field"><label>Bestellaktion</label><select id="export-aktion"></select></div>
+        </div>
+        <div class="btn-row" style="justify-content:flex-start;">
+          <button type="button" class="btn secondary" id="btn-export-text">Export als Text</button>
+          <button type="button" class="btn secondary" id="btn-export-pdf">Export als PDF</button>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+</div>
+
+<!-- Druckbereich (nur für PDF-Export sichtbar) -->
+<div id="print-area"><div id="print-content"></div></div>
+
+<script src="config.js?v=1.0"></script>
+<script src="db.js?v=1.0"></script>
+<!-- Selbstgeschriebener QR-Encoder, byte-genau aus dem Kadermanager übernommen
+     (dort gegen die Referenzimplementierung segno verifiziert). Kein CDN: der
+     Token im Link würde sonst bei jedem Aufruf an einen fremden Server gemeldet. -->
+<script src="qrcode.js?v=1.0"></script>
+<script src="app.js?v=1.0"></script>
+</body>
+</html>
