@@ -8,94 +8,47 @@ const EXTERN_BASIS = "https://sc1911heiligenstadt.github.io/kleiderbestellung/ex
 
 const APP_CHANGELOG = [
   {
-    version: "1.7",
+    version: "1.0",
     groups: [
       {
-        title: "Kürzel einer Bestellaktion bei eingefügtem Namen",
+        title: "Bestellung aufgeben",
         items: [
-          "Ein „ö“ kann als ein Zeichen oder als „o“ mit einem getrennten Pünktchen-Zeichen gespeichert sein — auf dem Bildschirm sieht beides gleich aus.",
-          "Beim Kürzel für eine Bestellaktion wurde nur die erste Art umgeschrieben. Aus einem eingefügten „Größe S“ wurde „gro-e-s“ statt „groesse-s“.",
-          "Jetzt werden beide Arten gleich behandelt. Bestehende Kürzel bleiben, wie sie sind."
+          "Trainerinnen und Trainer wählen aus einem Artikelkatalog die passende Größe — etwa Trainingsjacke oder Poloshirt.",
+          "Wie viele Stücke je Artikel möglich sind, gibt der Verein über den Katalog vor. Steht dort die Standardmenge 0, trägt der Besteller die Menge selbst ein (mindestens 1).",
+          "Die eigene Bestellung lässt sich beliebig oft ändern, solange das Bestellfenster offen ist.",
+          "Ein Kommentarfeld nimmt Anmerkungen auf, zum Beispiel Rückfragen zur Größe.",
+          "Die betreuten Mannschaften stehen als Hinweis neben dem eigenen Namen, sofern sie im zentralen Trainerprofil gepflegt sind."
         ]
-      }
-    ]
-  },
-  {
-    version: "1.6",
-    groups: [
+      },
       {
-        title: "Der Reiter „Info“ erklärt jetzt, was die App wirklich tut",
+        title: "Bestellaktionen",
         items: [
-          "Dort stand bisher ein einzelner Satz. Jetzt steht da, wofür die einzelnen Reiter da sind, was die App mit den Eingaben macht und wo etwas anderes hingehört.",
-          "Am Funktionsumfang ändert sich nichts — nur an der Beschreibung."
+          "Es gibt beliebig viele Bestellaktionen nebeneinander — zum Beispiel Trainerpaket, Spielerpaket und Funktionärspaket.",
+          "Jede Aktion erscheint im Reiter „Meine Bestellung“ als eigenes aufklappbares Feld mit eigenen Artikeln, eigenem Kommentar und eigenem Speichern-Knopf. Zugeklappt bleibt die Kopfzeile mit Name und Status stehen — sie zeigt schon dort, ob die eigene Bestellung steht („✓ 3 Artikel gewählt“) oder noch nichts gewählt ist. Läuft nur eine einzige Aktion, steht sie direkt offen da.",
+          "Jede Aktion kann einen Hinweistext tragen — zum Beispiel „Von jedem Teil ist das erste kostenfrei, jedes weitere zahlt ihr selbst“. Er steht vorn im Bestellformular über den Artikeln, im Reiter „Meine Bestellung“ genauso wie auf der Bestellseite für Spieler.",
+          "Jede Aktion hat ihr eigenes Bestellfenster: eine kann beim Lieferanten und damit geschlossen sein, während eine andere noch läuft. Ist es geschlossen, sind die Bestellungen dieser Aktion nur noch lesbar — damit sich nach der Bestellung beim Lieferanten nichts mehr verschiebt. Wieder öffnen ist jederzeit möglich.",
+          "Eine geschlossene Aktion sehen nur noch die, die dort auch bestellt haben — abgeschlossene Runden stehen also nicht mehr allen im Weg.",
+          "Eine Bestellaktion lässt sich anlegen, umbenennen, schließen, wieder öffnen und entfernen. Entfernen geht erst, wenn keine Bestellungen mehr darin liegen."
         ]
-      }
-    ]
-  },
-  {
-    version: "1.5",
-    groups: [
+      },
       {
-        title: "Am Handy",
+        title: "Artikelkatalog",
         items: [
-          "Bisher brach die Reiterleiste selbst um, die rechte Reiter-Gruppe darin aber nicht: Sie rutschte als ein Stück in die zweite Zeile und lief dort weiter über den rechten Rand hinaus. Jetzt bricht auch sie um, sobald sie zu breit wird. Zu sehen ist das nur, wenn genug Reiter nebeneinanderstehen — bis dahin sieht alles aus wie bisher."
+          "Artikel mit Namen, verfügbaren Größen und Standardmenge anlegen, bearbeiten, stilllegen oder entfernen.",
+          "Der Katalog ist nach Bestellaktion gruppiert und je Aktion aufklappbar, mit der Artikelzahl in der Kopfzeile; ein neuer Artikel wird beim Anlegen einer Aktion zugeordnet.",
+          "Ein Artikel lässt sich über ein Auswahlfeld in eine andere Aktion verschieben — bereits abgegebene Bestellungen dieses Artikels wandern mit, damit keine Bestellung ins Leere zeigt.",
+          "Ein Artikel, der schon bestellt wurde, lässt sich nur stilllegen und nicht löschen — sonst stünden bestehende Bestellungen ohne Bezug da."
         ]
-      }
-    ]
-  },
-  {
-    version: "1.4",
-    groups: [
-      {
-        title: "Hinweistext je Bestellaktion",
-        items: [
-          "Jede Bestellaktion kann jetzt einen Freitext tragen — zum Beispiel „Von jedem Teil ist das erste kostenfrei, jedes weitere zahlt ihr selbst“ oder was sonst zur Aktion zu sagen ist.",
-          "Gepflegt wird der Text im Reiter „Einstellungen“ direkt bei der Bestellaktion; Zeilenumbrüche bleiben erhalten.",
-          "Zu lesen ist er vorn im Bestellformular über den Artikeln — im Reiter „Meine Bestellung“ genauso wie auf der Bestellseite für Spieler über den Link."
-        ]
-      }
-    ]
-  },
-  {
-    version: "1.3",
-    groups: [
-      {
-        title: "Frei wählbare Menge je Artikel",
-        items: [
-          "Neu im Artikelkatalog: die Standardmenge 0. Sie bedeutet, dass die Menge nicht vorgegeben ist — wer bestellt, trägt sie selbst ein (mindestens 1).",
-          "Das gilt im Reiter „Meine Bestellung“ genauso wie auf der Bestellseite für Spieler über den Link.",
-          "Wird eine Größe gewählt, aber keine Menge eingetragen, sagt die Seite Bescheid statt die Zeile still wegzulassen.",
-          "Bei allen anderen Artikeln bleibt alles wie gehabt: die Menge kommt fest aus dem Katalog und lässt sich beim Bestellen nicht ändern."
-        ]
-      }
-    ]
-  },
-  {
-    version: "1.2",
-    groups: [
-      {
-        title: "Aufklappbare Bestellaktionen",
-        items: [
-          "Jede Bestellaktion — etwa Trainerpaket oder U19-Paket — ist im Reiter „Meine Bestellung“ jetzt ein aufklappbares Feld: zugeklappt bleibt nur die Kopfzeile mit Name und Status, bei mehreren Aktionen wird die Seite damit deutlich kürzer.",
-          "Die Kopfzeile zeigt schon zugeklappt, ob die eigene Bestellung steht („✓ 3 Artikel gewählt“) oder noch nichts gewählt ist.",
-          "Läuft nur eine einzige Bestellaktion, steht sie wie bisher direkt offen da.",
-          "Auch im Reiter „Einstellungen“ sind Artikelkatalog und Bestellungsübersicht je Bestellaktion aufklappbar — mit Artikel- bzw. Bestellzahl in der Kopfzeile.",
-          "Was auf- oder zugeklappt ist, bleibt beim Speichern und Aktualisieren erhalten; nach dem Anlegen eines Artikels öffnet sich seine Gruppe von selbst."
-        ]
-      }
-    ]
-  },
-  {
-    version: "1.1",
-    groups: [
+      },
       {
         title: "Bestellen ohne Vereinskonto",
         items: [
-          "Spieler haben kein Konto in der Tools-Übersicht und können jetzt trotzdem selbst bestellen — über einen Link je Bestellaktion, den es als QR-Code zum Zeigen und zum Verschicken gibt.",
-          "Wer den Link öffnet, trägt Vorname, Nachname und Geburtsjahr ein und wählt seine Größen. Die Menge gibt weiterhin der Verein vor.",
+          "Spieler haben kein Konto in der Tools-Übersicht und können trotzdem selbst bestellen — über einen Link je Bestellaktion, den es als QR-Code zum Zeigen und zum Verschicken gibt.",
+          "Wer den Link öffnet, trägt Vorname, Nachname und Geburtsjahr ein und wählt seine Größen. Ist die Menge im Katalog freigegeben, trägt er sie ebenfalls ein; sonst gibt sie der Verein vor.",
           "Beim ersten Absenden vergibt der Besteller ein eigenes Passwort. Damit kommt er über denselben Link jederzeit wieder an seine Bestellung und kann sie ändern, solange die Aktion läuft.",
           "Das Geburtsjahr gehört zum Namen dazu: zwei gleichnamige Spieler bekommen dadurch getrennte Bestellungen.",
-          "Umlaute und Schreibweisen sind egal — „Müller“ und „Mueller“ führen auf dieselbe Bestellung."
+          "Umlaute und Schreibweisen sind egal — „Müller“ und „Mueller“ führen auf dieselbe Bestellung.",
+          "Die Bestellseite trägt ihre eigene Datenschutz-Information nach Art. 13 DSGVO."
         ]
       },
       {
@@ -107,56 +60,15 @@ const APP_CHANGELOG = [
           "Hat jemand sein Passwort vergessen, lässt es sich dort zurücksetzen — er vergibt dann beim nächsten Öffnen ein neues und sieht seine bisherige Bestellung wieder.",
           "Externe Bestellungen zählen in der Bestellliste für den Lieferanten ganz normal mit."
         ]
-      }
-    ]
-  },
-  {
-    version: "1.0",
-    groups: [
-      {
-        title: "Bestellung aufgeben",
-        items: [
-          "Trainerinnen und Trainer wählen aus einem Artikelkatalog die passende Größe — etwa Trainingsjacke oder Poloshirt.",
-          "Wie viele Stücke je Artikel möglich sind, gibt der Verein über den Katalog vor.",
-          "Die eigene Bestellung lässt sich beliebig oft ändern, solange das Bestellfenster offen ist.",
-          "Ein Kommentarfeld nimmt Anmerkungen auf, zum Beispiel Rückfragen zur Größe.",
-          "Die betreuten Mannschaften stehen als Hinweis neben dem eigenen Namen, sofern sie im zentralen Trainerprofil gepflegt sind."
-        ]
-      },
-      {
-        title: "Bestellaktionen",
-        items: [
-          "Es gibt beliebig viele Bestellaktionen nebeneinander — zum Beispiel Trainerpaket, Spielerpaket und Funktionärspaket.",
-          "Jede Aktion erscheint im Reiter „Meine Bestellung“ als eigene Karte mit eigenen Artikeln, eigenem Kommentar und eigenem Speichern-Knopf.",
-          "Jede Aktion hat ihr eigenes Bestellfenster: eine kann beim Lieferanten und damit geschlossen sein, während eine andere noch läuft.",
-          "Eine geschlossene Aktion sehen nur noch die, die dort auch bestellt haben — abgeschlossene Runden stehen also nicht mehr allen im Weg.",
-          "Eine Bestellaktion lässt sich anlegen, umbenennen, schließen, wieder öffnen und entfernen. Entfernen geht erst, wenn keine Bestellungen mehr darin liegen."
-        ]
-      },
-      {
-        title: "Bestellfenster",
-        items: [
-          "Das Bestellfenster jeder Aktion lässt sich öffnen und schließen.",
-          "Ist es geschlossen, sind die Bestellungen dieser Aktion nur noch lesbar — damit sich nach der Bestellung beim Lieferanten nichts mehr verschiebt.",
-          "Wieder öffnen ist jederzeit möglich; andere Aktionen laufen unbeeindruckt weiter."
-        ]
-      },
-      {
-        title: "Artikelkatalog",
-        items: [
-          "Artikel mit Namen, verfügbaren Größen und Standardmenge anlegen, bearbeiten, stilllegen oder entfernen.",
-          "Der Katalog ist nach Bestellaktion gruppiert; ein neuer Artikel wird beim Anlegen einer Aktion zugeordnet.",
-          "Ein Artikel lässt sich über ein Auswahlfeld in eine andere Aktion verschieben — bereits abgegebene Bestellungen dieses Artikels wandern mit, damit keine Bestellung ins Leere zeigt.",
-          "Ein Artikel, der schon bestellt wurde, lässt sich nur stilllegen und nicht löschen — sonst stünden bestehende Bestellungen ohne Bezug da."
-        ]
       },
       {
         title: "Übersicht und Bestellliste",
         items: [
-          "Tabelle aller abgegebenen Bestellungen mit Name, Positionen und letzter Änderung, jede Aktion als eigener Abschnitt mit eigener Summe.",
+          "Tabelle aller abgegebenen Bestellungen mit Name, Positionen und letzter Änderung, jede Aktion als eigener aufklappbarer Abschnitt mit eigener Summe.",
           "Export als Text- oder PDF-Datei, gruppiert nach Artikel und Größe — so lässt sie sich direkt an den Lieferanten weiterreichen.",
           "Der Export lässt sich auf eine einzelne Bestellaktion einschränken; „Alle Bestellaktionen“ liefert eine Datei mit einem Abschnitt je Aktion.",
-          "Nach dem Speichern einer Bestellung aktualisiert sich die Übersicht sofort."
+          "Nach dem Speichern einer Bestellung aktualisiert sich die Übersicht sofort.",
+          "Was auf- oder zugeklappt ist, bleibt beim Speichern und Aktualisieren erhalten; nach dem Anlegen eines Artikels öffnet sich seine Gruppe von selbst."
         ]
       },
       {
@@ -164,7 +76,7 @@ const APP_CHANGELOG = [
         items: [
           "Sehen: das Bestellformular schreibgeschützt mit Hinweis; eine Bestellung abgeben geht nicht, auch nicht am Bildschirm vorbei.",
           "Bearbeiten: die eigene Bestellung aufgeben und ändern.",
-          "Administrieren: Bestellaktionen anlegen und schließen, Artikelkatalog pflegen, Gesamtübersicht einsehen, fremde Bestellungen löschen und die Bestellliste exportieren.",
+          "Administrieren: Bestellaktionen anlegen und schließen, Artikelkatalog pflegen, Gesamtübersicht einsehen, fremde Bestellungen löschen, die Bestellliste exportieren und die Links für Spieler verwalten.",
           "Der Reiter „Info“ ist für alle sichtbar."
         ]
       },
@@ -176,9 +88,10 @@ const APP_CHANGELOG = [
         ]
       },
       {
-        title: "Daten & Speicherung",
+        title: "Daten und Speicherung",
         items: [
-          "Gespeichert wird in der Vereins-Nextcloud über die zentrale Anmeldung der Tools-Übersicht — ein eigenes Passwort braucht es nicht."
+          "Gespeichert wird in der Vereins-Nextcloud über die zentrale Anmeldung der Tools-Übersicht — wer ein Vereinskonto hat, braucht hier kein eigenes Passwort.",
+          "Nur wer ohne Vereinskonto über den Link bestellt, vergibt sich beim ersten Absenden ein eigenes Passwort für seine Bestellung."
         ]
       }
     ]

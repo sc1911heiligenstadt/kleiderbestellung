@@ -12,16 +12,32 @@ Lieferanten.
 | Seite | Wofür |
 |---|---|
 | [Kleiderbestellung](https://sc1911heiligenstadt.github.io/kleiderbestellung/) | Die eigene Bestellung abgeben; Verwaltung von Katalog und Bestellaktionen |
-| [Bestellung für Spieler](https://sc1911heiligenstadt.github.io/kleiderbestellung/extern.html) | Für Spieler und Eltern **ohne Vereinskonto** — über einen persönlichen Link, ganz ohne Anmeldung |
+| [Bestellung für Spieler](https://sc1911heiligenstadt.github.io/kleiderbestellung/extern.html) (`extern.html`) | Für Spieler und Eltern **ohne Vereinskonto** — über den Link je Bestellaktion, ganz ohne Anmeldung |
+
+Die Spieler-Seite wird über einen Link je Bestellaktion erreicht, den die Verwaltung
+erzeugt, als QR-Code anzeigt, als Bild herunterlädt und wieder zurückziehen kann. Wer
+sie öffnet, trägt Vorname, Nachname und Geburtsjahr ein und vergibt beim ersten
+Absenden ein eigenes Passwort — damit kommt er über denselben Link jederzeit wieder an
+seine Bestellung. Umlaute und Schreibweisen sind dabei egal; das Geburtsjahr trennt
+zwei gleichnamige Spieler.
 
 ## Wie es gedacht ist
 
-1. Die Verwaltung pflegt den **Artikelkatalog** und öffnet eine
-   **Bestellaktion** mit Zeitraum.
+1. Die Verwaltung legt eine **Bestellaktion** an — etwa Trainerpaket oder
+   Spielerpaket —, pflegt ihren **Artikelkatalog** und öffnet ihr Bestellfenster.
+   Jede Aktion kann einen eigenen Hinweistext tragen, der über den Artikeln steht.
 2. Wer bestellen will, wählt Artikel und Größe unter **Meine Bestellung**.
-   Spieler und Eltern ohne Konto bekommen dafür einen eigenen Link.
-3. Nach Ablauf steht die **Bestellungsübersicht**, und der **Export** liefert
-   die Liste für den Lieferanten.
+   Spieler und Eltern ohne Konto bekommen dafür einen eigenen Link mit QR-Code.
+3. Ist das Bestellfenster geschlossen, steht die **Bestellungsübersicht**, und der
+   **Export** liefert die Liste für den Lieferanten — nach Artikel und Größe
+   gruppiert, als Text oder PDF.
+
+Jede Aktion hat ihr eigenes Bestellfenster: eine kann beim Lieferanten und damit
+geschlossen sein, während eine andere noch läuft. Geschlossene Aktionen sehen nur
+noch die, die dort bestellt haben.
+
+Die Menge gibt in der Regel der Verein über den Katalog vor. Steht dort die
+Standardmenge 0, trägt der Besteller sie selbst ein.
 
 Liegt für eine Person schon eine Bestellung vor, sagt die Seite das — statt
 stillschweigend eine zweite anzulegen.
@@ -36,7 +52,7 @@ Familien über die
 
 Die Anmeldung läuft über die [Tools-Übersicht](https://sc1911heiligenstadt.github.io/ToolsUebersicht/) — dort einmal anmelden, danach ist dieses Werkzeug offen. Die Spieler-Seite braucht **keine Anmeldung**, sondern nur den persönlichen Link.
 
-Die Rechte gelten in drei Stufen: **Sehen** (den Artikelkatalog und die eigene Bestellung ansehen), **Bearbeiten** (die eigene Bestellung abgeben und ändern, solange das Bestellfenster offen ist) und **Administrieren** (Reiter *Einstellungen*: Artikelkatalog und Bestellaktionen pflegen, Bestellungsübersicht und Export). Wer welche Stufe hat, legt die Tools-Übersicht fest.
+Die Rechte gelten in drei Stufen: **Sehen** (den Artikelkatalog und die eigene Bestellung ansehen), **Bearbeiten** (die eigene Bestellung abgeben und ändern, solange das Bestellfenster offen ist) und **Administrieren** (Reiter *Einstellungen*: Artikelkatalog und Bestellaktionen pflegen, Bestellungsübersicht, Export, fremde Bestellungen löschen und die Links für Spieler verwalten). Wer welche Stufe hat, legt die Tools-Übersicht fest.
 
 ## Lokal starten
 
