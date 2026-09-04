@@ -113,7 +113,7 @@
         <div id="aktionen-rows"></div>
         <h3 style="margin-top:18px;">Neue Bestellaktion</h3>
         <div class="form-grid">
-          <div class="form-field"><label>Name</label><input type="text" id="nb-name" placeholder="z.B. Trainerpaket" /></div>
+          <div class="form-field"><label for="nb-name">Name</label><input type="text" id="nb-name" placeholder="z.B. Trainerpaket" /></div>
         </div>
         <div class="btn-row" style="justify-content:flex-start;">
           <button type="button" class="btn secondary" id="btn-add-aktion">+ Bestellaktion anlegen</button>
@@ -131,9 +131,9 @@
         <div id="katalog-neu">
           <h3 style="margin-top:18px;">Neuer Artikel</h3>
           <div class="form-grid">
-            <div class="form-field"><label>Bestellaktion</label><select id="na-aktion"></select></div>
-            <div class="form-field"><label>Name</label><input type="text" id="na-name" placeholder="z.B. Trainingsjacke" /></div>
-            <div class="form-field"><label>Größen (Komma-getrennt)</label><input type="text" id="na-groessen" placeholder="z.B. XS, S, M, L, XL, XXL" /></div>
+            <div class="form-field"><label for="na-aktion">Bestellaktion</label><select id="na-aktion"></select></div>
+            <div class="form-field"><label for="na-name">Name</label><input type="text" id="na-name" placeholder="z.B. Trainingsjacke" /></div>
+            <div class="form-field"><label for="na-groessen">Größen (Komma-getrennt)</label><input type="text" id="na-groessen" placeholder="z.B. XS, S, M, L, XL, XXL" /></div>
             <div class="form-field"><label>Standardmenge (0 = frei wählbar)</label><input type="number" id="na-menge" min="0" step="1" value="1" title="0 bedeutet: die Menge wählt der Besteller selbst" /></div>
           </div>
           <div class="btn-row" style="justify-content:flex-start;">
@@ -157,7 +157,7 @@
         </div>
         <p class="muted">Zusammenfassung der Bestellungen, gruppiert nach Artikel und Größe — z.B. zum Weiterreichen an einen Lieferanten. Wähle eine einzelne Bestellaktion oder alle zusammen (dann steht jede Aktion in einem eigenen Abschnitt).</p>
         <div class="form-grid">
-          <div class="form-field"><label>Bestellaktion</label><select id="export-aktion"></select></div>
+          <div class="form-field"><label for="export-aktion">Bestellaktion</label><select id="export-aktion"></select></div>
         </div>
         <div class="btn-row" style="justify-content:flex-start;">
           <button type="button" class="btn secondary" id="btn-export-text">Export als Text</button>
