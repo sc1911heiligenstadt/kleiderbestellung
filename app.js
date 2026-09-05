@@ -761,6 +761,22 @@ function istArtikelInBestellungVerwendet(aktion, artikelId) {
     (b.positionen || []).some((p) => p.artikelId === artikelId));
 }
 
+// Welche Größen zu diesem Artikel schon bestellt wurden. Der Löschschutz oben
+// arbeitet auf Artikel-Ebene; für die Größen gab es nichts Vergleichbares, und
+// die Größenliste ist eine kommagetrennte Freitextzeile — ein Tippfehler beim
+// Nachpflegen nimmt eine Größe genauso weg wie eine bewusste Streichung.
+function bestellteGroessen(aktion, artikelId) {
+  const raus = [];
+  for (const b of Object.values((aktion && aktion.bestellungen) || {})) {
+    for (const p of (b.positionen || [])) {
+      if (!p || p.artikelId !== artikelId) continue;
+      const g = String(p.groesse || "");
+      if (g && raus.indexOf(g) < 0) raus.push(g);
+    }
+  }
+  return raus;
+}
+
 // Liest das Standardmengen-Feld der Katalogpflege. Eine ausdrückliche 0 gibt
 // die Menge frei (der Besteller wählt selbst); leer oder Unlesbares fällt auf
 // die feste 1 zurück. ⚠️ Bewusst KEIN `Number(...) || 1` — das machte aus der
@@ -893,6 +909,20 @@ async function updateArtikel(aktionId, artikelId, changes, neueAktionId) {
     const artikel = von && von.artikel.find((a) => a.id === artikelId);
     if (von && nach && artikel && istArtikelInBestellungVerwendet(von, artikelId)) {
       if (!confirm(`"${artikel.name}" wurde in "${von.name}" schon bestellt. Beim Verschieben nach "${nach.name}" wandern diese Bestellpositionen mit. Fortfahren?`)) return;
+    }
+  }
+  // Eine Größe aus der Liste zu nehmen, die noch bestellt ist, ist meistens ein
+  // Versehen (die Liste ist eine kommagetrennte Freitextzeile). Die Bestellungen
+  // gehen dabei nicht verloren — die Zeile bleibt im Formular als
+  // „(nicht mehr im Katalog)" stehen —, aber der Pflegende soll es wissen.
+  if (Array.isArray(changes.groessen)) {
+    const jetzige = findAktion(aktionId);
+    const artikel = jetzige && jetzige.artikel.find((a) => a.id === artikelId);
+    const verwaist = bestellteGroessen(jetzige, artikelId).filter((g) => changes.groessen.indexOf(g) < 0);
+    if (verwaist.length) {
+      const name = artikel ? artikel.name : artikelId;
+      const liste = verwaist.map((g) => `„${g}“`).join(", ");
+      if (!confirm(`Für „${name}“ ist ${liste} bereits bestellt, steht aber nicht mehr in der Größenliste. Die abgegebenen Bestellungen bleiben erhalten und werden von jetzt an mit dem Zusatz „(nicht mehr im Katalog)“ geführt. Trotzdem speichern?`)) return;
     }
   }
   try {

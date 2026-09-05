@@ -8,6 +8,17 @@ const EXTERN_BASIS = "https://sc1911heiligenstadt.github.io/kleiderbestellung/ex
 
 const APP_CHANGELOG = [
   {
+    version: "1.2",
+    groups: [
+      {
+        title: "Katalogpflege fragt nach, wenn eine bestellte Größe wegfällt",
+        items: [
+          "Die Größen eines Artikels sind eine Zeile mit Kommas. Ein Tippfehler beim Nachpflegen nimmt eine Größe genauso weg wie eine bewusste Streichung — und bisher passierte das kommentarlos. Jetzt kommt eine Rückfrage, sobald eine Größe aus der Liste fällt, die schon jemand bestellt hat. Die Bestellungen bleiben in beiden Fällen erhalten."
+        ]
+      }
+    ]
+  },
+  {
     version: "1.1",
     groups: [
       {
