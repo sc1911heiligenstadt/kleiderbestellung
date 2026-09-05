@@ -21,6 +21,11 @@ let ident = null;           // { vorname, nachname, jahrgang }
 let passwort = "";
 let brauchtNeuesPasswort = false;
 let bestehendeBestellung = null;
+// Artikel, die der Katalog nicht mehr anbietet, auf die diese Bestellung aber
+// eine Position hat. Der Worker liefert sie seit dem 05.09.2026 mit; ein
+// aelterer Worker liefert nichts, dann bleibt die Liste leer und alles ist wie
+// vorher.
+let zusatzArtikel = [];
 
 function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
@@ -155,6 +160,7 @@ function verarbeiteAnmeldung(res) {
   // "ok"    = Passwort stimmte, Bestellung liegt bei
   brauchtNeuesPasswort = (res.status !== "ok");
   bestehendeBestellung = res.bestellung || null;
+  zusatzArtikel = Array.isArray(res.zusatzArtikel) ? res.zusatzArtikel : [];
   renderBestellung();
   zeigeSchritt("schritt-bestellung");
 }
@@ -212,11 +218,19 @@ function renderBestellung() {
     gewaehlt[p.artikelId] = p;
   }
 
+  // ⚠️ Der Katalog aus `kb-extern-start` enthält nur AKTIVE Artikel. Wer einen
+  // inzwischen abgeschalteten Artikel bereits bestellt hat, sah ihn deshalb gar
+  // nicht — und schickte beim nächsten Speichern eine Liste ohne ihn zurück.
+  // Der Worker liefert solche Artikel jetzt als `zusatzArtikel` mit; sie stehen
+  // hinten, sind gekennzeichnet und lassen sich nur abwählen, nicht neu wählen.
+  const alleArtikel = aktion.artikel.concat(
+    zusatzArtikel.filter((z) => z && !aktion.artikel.some((a) => a.id === z.id)));
+
   const rows = el("b-rows");
-  if (!aktion.artikel.length) {
+  if (!alleArtikel.length) {
     rows.innerHTML = `<div class="empty-state">In dieser Bestellaktion stehen noch keine Artikel.</div>`;
   } else {
-    rows.innerHTML = aktion.artikel.map((a) => {
+    rows.innerHTML = alleArtikel.map((a) => {
       const pos = gewaehlt[a.id];
       // menge 0 vom Worker heißt: die Menge ist nicht vorgegeben, der Besteller
       // wählt sie selbst — nur dann ist das Feld editierbar. Ein älterer Worker
@@ -231,9 +245,10 @@ function renderBestellung() {
       const katalogGroessen = Array.isArray(a.groessen) ? a.groessen : [];
       const bestellteGroesse = pos ? String(pos.groesse || "") : "";
       const fehlendeGroesse = bestellteGroesse && katalogGroessen.indexOf(bestellteGroesse) < 0 ? bestellteGroesse : "";
+      const wegVomKatalog = a.nichtMehrBestellbar === true;
       return `
       <div class="bestell-row" data-artikel-id="${escapeHtml(a.id)}" ${frei ? 'data-menge-frei="1"' : ""}>
-        <span class="bestell-artikel-name">${escapeHtml(a.name)}</span>
+        <span class="bestell-artikel-name">${escapeHtml(a.name)}${wegVomKatalog ? ' <span class="muted">(nicht mehr bestellbar)</span>' : ""}</span>
         <select class="bestell-groesse" ${aktion.offen ? "" : "disabled"}>
           <option value="">— keine Auswahl —</option>
           ${katalogGroessen.map((g) => `<option value="${escapeHtml(g)}" ${g === bestellteGroesse ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
@@ -353,6 +368,7 @@ function zurueckZurIdent() {
   ident = null;
   passwort = "";
   bestehendeBestellung = null;
+  zusatzArtikel = [];
   brauchtNeuesPasswort = false;
   renderIdentKopf();
   zeigeSchritt("schritt-ident");

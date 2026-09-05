@@ -8,6 +8,19 @@ const EXTERN_BASIS = "https://sc1911heiligenstadt.github.io/kleiderbestellung/ex
 
 const APP_CHANGELOG = [
   {
+    version: "1.3",
+    groups: [
+      {
+        title: "Über den Spieler-Link geht keine Bestellung mehr verloren",
+        items: [
+          "Wird ein Artikel abgeschaltet, nachdem jemand ihn bestellt hat, stand er über den Spieler-Link gar nicht mehr da. Beim nächsten Speichern — auch nur des Kommentars — war die Bestellung dann weg, ohne Hinweis. Jetzt steht sie da, mit dem Zusatz „nicht mehr bestellbar“, und lässt sich abwählen, aber nicht neu wählen.",
+          "Dasselbe für eine Größe, die aus dem Katalog genommen wurde.",
+          "Der Server nimmt so eine Position auch dann noch an, wenn sie schon gespeichert war — eine neue mit einer unbekannten Größe weiterhin nicht."
+        ]
+      }
+    ]
+  },
+  {
     version: "1.2",
     groups: [
       {
