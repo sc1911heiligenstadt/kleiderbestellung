@@ -267,12 +267,22 @@ function renderBestellAktionCard(aktion) {
           ? "Bei diesem Artikel wählst du die Menge selbst."
           : "Die Menge ist je Artikel fest vom Verein vorgegeben.";
         const inaktivLabel = a.aktiv === false ? " (nicht mehr bestellbar)" : "";
+        // Eine bereits bestellte Groesse, die inzwischen aus dem Katalog
+        // genommen oder umbenannt wurde, MUSS trotzdem als Option dastehen.
+        // Sonst war keine Option `selected`, der Browser zeigte "— keine
+        // Auswahl —", und beim naechsten Speichern fiel die Zeile in
+        // collectPositionenFromCard (`if (!groesse) return;`) heraus: die
+        // abgegebene Bestellung war lautlos weg. Gleiche Denkweise wie beim
+        // deaktivierten Artikel eine Zeile darueber -- Ausgestelltes bleibt.
+        const katalogGroessen = Array.isArray(a.groessen) ? a.groessen : [];
+        const fehlendeGroesse = groesse && katalogGroessen.indexOf(groesse) < 0 ? groesse : "";
         return `
         <div class="bestell-row" data-artikel-id="${escapeHtml(a.id)}">
           <span class="bestell-artikel-name">${escapeHtml(a.name)}${inaktivLabel}</span>
           <select class="bestell-groesse" ${bearbeitbar ? "" : "disabled"}>
             <option value="">— keine Auswahl —</option>
-            ${(a.groessen || []).map((g) => `<option value="${escapeHtml(g)}" ${g === groesse ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
+            ${katalogGroessen.map((g) => `<option value="${escapeHtml(g)}" ${g === groesse ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
+            ${fehlendeGroesse ? `<option value="${escapeHtml(fehlendeGroesse)}" selected>${escapeHtml(fehlendeGroesse)} (nicht mehr im Katalog)</option>` : ""}
           </select>
           <input type="number" class="bestell-menge" min="1" step="1" value="${escapeHtml(menge)}" placeholder="Menge" ${mengeEditierbar ? "" : "disabled"} title="${escapeHtml(mengeTitle)}" />
         </div>`;

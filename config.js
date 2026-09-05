@@ -8,6 +8,17 @@ const EXTERN_BASIS = "https://sc1911heiligenstadt.github.io/kleiderbestellung/ex
 
 const APP_CHANGELOG = [
   {
+    version: "1.1",
+    groups: [
+      {
+        title: "Eine bestellte Größe verschwindet nicht mehr",
+        items: [
+          "Nimmt die Verwaltung eine Größe aus dem Katalog oder schreibt sie anders („XL“ raus, „128“ wird „128 cm“), stand die schon bestellte Zeile bisher auf „— keine Auswahl —“. Es sah aus, als hätte man nie etwas gewählt. Beim nächsten Speichern fiel die Zeile lautlos weg — aus der Bestellung und aus der Liste für den Lieferanten. Jetzt bleibt die bestellte Größe stehen, mit dem Zusatz „(nicht mehr im Katalog)“, und wird mitgespeichert. Gilt für den Reiter „Meine Bestellung“ und für die Bestellseite der Spieler."
+        ]
+      }
+    ]
+  },
+  {
     version: "1.0",
     groups: [
       {

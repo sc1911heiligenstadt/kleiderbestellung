@@ -224,12 +224,20 @@ function renderBestellung() {
       const frei = a.menge === 0;
       const menge = frei ? (pos && pos.menge > 0 ? pos.menge : 1) : a.menge;
       const titel = frei ? "Bei diesem Artikel wählst du die Menge selbst." : "Die Menge ist je Artikel fest vom Verein vorgegeben.";
+      // Wie im internen Weg (app.js): eine schon bestellte Größe, die inzwischen
+      // aus dem Katalog genommen wurde, bleibt als Option stehen. Ohne sie war
+      // keine Option gewählt, der Browser zeigte „— keine Auswahl —", und beim
+      // nächsten Absenden fiel die Zeile in sammlePositionen() heraus.
+      const katalogGroessen = Array.isArray(a.groessen) ? a.groessen : [];
+      const bestellteGroesse = pos ? String(pos.groesse || "") : "";
+      const fehlendeGroesse = bestellteGroesse && katalogGroessen.indexOf(bestellteGroesse) < 0 ? bestellteGroesse : "";
       return `
       <div class="bestell-row" data-artikel-id="${escapeHtml(a.id)}" ${frei ? 'data-menge-frei="1"' : ""}>
         <span class="bestell-artikel-name">${escapeHtml(a.name)}</span>
         <select class="bestell-groesse" ${aktion.offen ? "" : "disabled"}>
           <option value="">— keine Auswahl —</option>
-          ${a.groessen.map((g) => `<option value="${escapeHtml(g)}" ${pos && g === pos.groesse ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
+          ${katalogGroessen.map((g) => `<option value="${escapeHtml(g)}" ${g === bestellteGroesse ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
+          ${fehlendeGroesse ? `<option value="${escapeHtml(fehlendeGroesse)}" selected>${escapeHtml(fehlendeGroesse)} (nicht mehr im Katalog)</option>` : ""}
         </select>
         <input type="number" class="bestell-menge" min="1" step="1" value="${escapeHtml(menge)}" ${frei && aktion.offen ? "" : "disabled"} title="${escapeHtml(titel)}" />
       </div>`;
