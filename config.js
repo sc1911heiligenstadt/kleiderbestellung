@@ -6,7 +6,116 @@ const APP_VERSION = "1.0";
 // er sonst auf localhost — und das fiele erst auf, wenn ihn jemand scannt.
 const EXTERN_BASIS = "https://sc1911heiligenstadt.github.io/kleiderbestellung/extern.html";
 
+// Was die App kann — steht im Info-Reiter als Karte "Funktionen".
+// WICHTIG: Das ist NICHT der Changelog. Hier steht der ZUSTAND ("die Bestellung
+// laesst sich aendern"), dort die Aenderung ("die Bestellung laesst sich JETZT
+// aendern"). Wer eine Funktion umbaut oder abschaltet, zieht diesen Text mit —
+// und ebenso E:\SC1911-Tools-Anleitung.txt, wo dasselbe ausfuehrlich steht.
+const APP_FUNKTIONEN = [
+  {
+    title: "Bestellung aufgeben",
+    items: [
+      "Trainerinnen und Trainer wählen aus dem Artikelkatalog des Vereins die passende Größe — etwa Trainingsjacke oder Poloshirt.",
+      "Wie viele Stücke je Artikel möglich sind, gibt der Verein über den Katalog vor. Steht dort die Standardmenge 0, trägt der Besteller die Menge selbst ein (mindestens 1).",
+      "Die eigene Bestellung lässt sich beliebig oft ändern, solange das Bestellfenster offen ist; die zuletzt gespeicherten Werte sind vorbelegt.",
+      "Ein Kommentarfeld nimmt Anmerkungen auf, zum Beispiel Rückfragen zur Größe."
+    ]
+  },
+  {
+    title: "Bestellaktionen",
+    items: [
+      "Es laufen beliebig viele Bestellaktionen nebeneinander — zum Beispiel Trainerpaket, Spielerpaket und Funktionärspaket.",
+      "Jede Aktion ist ein eigenes aufklappbares Feld mit eigenen Artikeln, eigenem Hinweistext, eigenem Kommentar und eigenem Speichern-Knopf. Die Kopfzeile zeigt schon zugeklappt, ob die eigene Bestellung steht.",
+      "Jede Aktion hat ihr eigenes Bestellfenster: eine kann beim Lieferanten und damit geschlossen sein, während eine andere noch läuft.",
+      "Eine geschlossene Aktion sehen nur noch die, die dort auch bestellt haben; ihre Bestellungen sind dann nur noch lesbar."
+    ]
+  },
+  {
+    title: "Artikelkatalog",
+    items: [
+      "Artikel mit Namen, verfügbaren Größen und Standardmenge anlegen, bearbeiten, stilllegen oder entfernen.",
+      "Der Katalog ist nach Bestellaktion gruppiert und je Aktion aufklappbar, mit der Artikelzahl in der Kopfzeile.",
+      "Ein Artikel lässt sich in eine andere Bestellaktion verschieben — die schon abgegebenen Bestellungen wandern mit.",
+      "Fällt beim Pflegen eine Größe weg, die jemand bereits bestellt hat, kommt eine Rückfrage. Die Bestellung bleibt in jedem Fall erhalten und wird mit dem Zusatz „nicht mehr im Katalog“ angezeigt."
+    ]
+  },
+  {
+    title: "Bestellen ohne Vereinskonto",
+    items: [
+      "Spieler und Eltern haben kein Konto in der Tools-Übersicht und bestellen trotzdem selbst — über einen eigenen Link je Bestellaktion.",
+      "Wer den Link öffnet, trägt Vorname, Nachname und Geburtsjahr ein und wählt seine Größen; die Menge trägt er nur ein, wenn der Katalog sie freigibt.",
+      "Beim ersten Absenden vergibt der Besteller ein eigenes Passwort und kommt damit über denselben Link jederzeit wieder an seine Bestellung.",
+      "Das Geburtsjahr gehört zum Namen: zwei gleichnamige Spieler bekommen getrennte Bestellungen. Umlaute und Schreibweisen sind egal — „Müller“ und „Mueller“ führen auf dieselbe Bestellung.",
+      "Die Bestellseite trägt ihre eigene Datenschutz-Information nach Art. 13 DSGVO."
+    ]
+  },
+  {
+    title: "Den Link für Spieler verwalten",
+    items: [
+      "Je Bestellaktion lässt sich ein Link erzeugen, als QR-Code anzeigen, als Bild herunterladen und wieder zurückziehen.",
+      "Ein zurückgezogener Link führt ins Leere; bereits abgegebene Bestellungen bleiben davon unberührt.",
+      "Hat ein Besteller sein Passwort vergessen, lässt es sich in der Übersicht zurücksetzen. Er vergibt beim nächsten Öffnen ein neues und sieht seine bisherige Bestellung wieder.",
+      "Der QR-Code entsteht in der App selbst. Der Link mit dem Zugangsschlüssel wird dafür an keinen fremden Server gemeldet."
+    ]
+  },
+  {
+    title: "Übersicht und Bestellliste",
+    items: [
+      "Tabelle aller abgegebenen Bestellungen mit Name, Positionen und letzter Änderung — jede Bestellaktion als eigener aufklappbarer Abschnitt mit eigener Summe.",
+      "Bestellungen über den Spieler-Link sind gekennzeichnet, tragen den Jahrgang und zählen ganz normal mit.",
+      "Export als Text- oder PDF-Datei, gruppiert nach Artikel und Größe — so lässt sie sich direkt an den Lieferanten weiterreichen.",
+      "Der Export lässt sich auf eine einzelne Bestellaktion einschränken; „Alle Bestellaktionen“ liefert eine Datei mit einem Abschnitt je Aktion."
+    ]
+  },
+  {
+    title: "Grenzen",
+    items: [
+      "Gebrauchte Kleidung läuft nicht hier, sondern über die Kleiderbörse. In diesem Werkzeug wird neue Vereinskleidung bestellt.",
+      "Preise, Rechnungen und Bezahlung gibt es nicht. Die Bestellliste ist die Vorlage, die Bestellung beim Lieferanten gibt jemand selbst auf.",
+      "Ein Artikel, der schon bestellt wurde, lässt sich nur stilllegen und nicht löschen — sonst stünden bestehende Bestellungen ohne Bezug da.",
+      "Eine Bestellaktion lässt sich erst entfernen, wenn keine Bestellung mehr darin liegt."
+    ]
+  },
+  {
+    title: "Wer darf was",
+    items: [
+      "Sehen: das Bestellformular schreibgeschützt mit Hinweis. Eine Bestellung abgeben geht nicht, auch nicht am Bildschirm vorbei.",
+      "Bearbeiten: die eigene Bestellung aufgeben und ändern.",
+      "Administrieren: Bestellaktionen anlegen und schließen, den Artikelkatalog pflegen, die Gesamtübersicht einsehen, fremde Bestellungen löschen, die Bestellliste exportieren und die Links für Spieler verwalten.",
+      "Der Reiter „Info“ ist für alle sichtbar."
+    ]
+  },
+  {
+    title: "Bedienung am Handy",
+    items: [
+      "Die Reiterleiste bricht am Handy um, statt seitlich aus dem Bild zu laufen — auch die hinteren Reiter sind auf schmalen Bildschirmen erreichbar.",
+      "Eingabefelder sind mindestens 16 Pixel groß, damit der iPhone-Browser beim Antippen nicht ungefragt in die Seite hineinzoomt."
+    ]
+  },
+  {
+    title: "Daten und Speicherung",
+    items: [
+      "Gespeichert wird in der Vereins-Nextcloud über die zentrale Anmeldung der Tools-Übersicht. Wer ein Vereinskonto hat, braucht hier kein eigenes Passwort.",
+      "Nur wer ohne Vereinskonto über den Link bestellt, vergibt sich beim ersten Absenden ein eigenes Passwort für seine Bestellung.",
+      "Speichern zwei Leute gleichzeitig, wird der fremde Stand nachgeladen und die eigene Änderung erneut angewendet, statt den anderen zu überschreiben."
+    ]
+  }
+];
+
 const APP_CHANGELOG = [
+  {
+    version: "1.4",
+    groups: [
+      {
+        title: "Im Info-Reiter steht jetzt, was die App kann",
+        items: [
+          "Die Liste der Änderungen und die Versionsnummer sind aus dem Info-Reiter verschwunden.",
+          "Stattdessen steht dort die Karte „Funktionen“: was die App kann, nach Themen geordnet.",
+          "Was sich geändert hat, steht weiterhin in den Neuigkeiten auf der Startseite der Tools-Übersicht."
+        ]
+      }
+    ]
+  },
   {
     version: "1.3",
     groups: [
