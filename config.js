@@ -117,6 +117,18 @@ const APP_FUNKTIONEN = [
 
 const APP_CHANGELOG = [
   {
+    version: "1.6",
+    groups: [
+      {
+        title: "Das Kürzel auf der Verteilliste ist jetzt kürzer",
+        items: [
+          "Es besteht nur noch aus zwei Buchstaben ohne Punkte: dem ersten vom Vornamen und dem ersten vom Nachnamen. Aus „F.W.“ wird „FW“.",
+          "Haben zwei Personen dasselbe Kürzel, wird es nicht mehr verlängert. Ihre Zeilen stehen auf der Liste aber jeweils am Stück untereinander, und den vollen Namen zeigt weiterhin die Ausgabeliste in der App."
+        ]
+      }
+    ]
+  },
+  {
     version: "1.5",
     groups: [
       {
@@ -124,7 +136,7 @@ const APP_CHANGELOG = [
         items: [
           "Eine geschlossene Bestellaktion lässt sich jetzt abschließen — das heißt: die Bestellung ist beim Lieferanten aufgegeben. Der Knopf steht neben „Schließen“ und ist erst nach dem Schließen da.",
           "Mit dem Abschluss erscheint in den Einstellungen die neue Karte „Ausgabe“: je Person jedes bestellte Teil einzeln zum Abhaken, mit Datum und Uhrzeit. „Alles ausgeben“ hakt eine ganze Person auf einmal ab.",
-          "Jede Person trägt dort ein Kürzel aus zwei Buchstaben: dem ersten vom Vornamen und dem ersten vom Nachnamen, ohne Punkte — so wie der Beutel beschriftet wird.",
+          "Jede Person trägt dort ein eindeutiges Kürzel aus ihren Initialen, zum Beschriften des Beutels. Zwei gleiche Kürzel werden automatisch unterschieden.",
           "Neu im Export: die Verteilliste. Eine Zeile je Person und Teil, mit Kürzel statt Namen und einem Kästchen zum Abhaken — zum Ausdrucken für die Ausgabe. Die bisherige Liste für den Lieferanten bleibt unverändert und ist weiterhin die Vorauswahl.",
           "Wer bestellt hat, sieht am eigenen Formular, welche Teile schon ausgegeben sind.",
           "Ein Abschluss lässt sich zurücknehmen; die bereits abgehakte Ausgabe bleibt dabei erhalten. Wieder öffnen geht erst danach."

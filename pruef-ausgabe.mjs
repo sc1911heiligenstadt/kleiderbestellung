@@ -88,7 +88,7 @@ const bau = (extra) => normalizeAktion(Object.assign({
     { id: "socken", name: "Stutzen", groessen: ["36-40"], standardMenge: 0, aktiv: true }
   ],
   bestellungen: {
-    "michel.brunner": { vorname: "Michel", nachname: "Brunner", positionen: [
+    "frank.wagner": { vorname: "Frank", nachname: "Wagner", positionen: [
       { artikelId: "hoodie", groesse: "L", menge: 1 },
       { artikelId: "polo", groesse: "M", menge: 1 }
     ] },
@@ -151,24 +151,24 @@ console.log("\n2. Zustaende");
 
 console.log("\n3. Kuerzel");
 {
-  // Michel-Vorgabe 2026-09-09: GENAU zwei Buchstaben, ohne Punkt, ohne Trenner.
+  // Vorgabe vom 2026-09-09: GENAU zwei Buchstaben, ohne Punkt, ohne Trenner.
   gleich("zwei Buchstaben, keine Punkte", kuerzel("Frank", "Wagner"), "FW");
   gleich("kleingeschrieben wird gross", kuerzel("michel", "brunner"), "MB");
   gleich("Umlaut bleibt Umlaut", kuerzel("Örs", "Übel"), "ÖÜ");
   gleich("Doppelname zaehlt nur den ersten Buchstaben", kuerzel("Jan-Peter", "von Haaren"), "JV");
   gleich("Leerzeichen am Rand faellt weg", kuerzel("  Frank ", " Wagner "), "FW");
-  gleich("ohne Nachname", kuerzel("Michel", ""), "M");
+  gleich("ohne Nachname", kuerzel("Frank", ""), "F");
   gleich("ohne Vornamen", kuerzel("", "Wagner"), "W");
   gleich("ohne Namen", kuerzel("", ""), "?");
   zusage("nie ein Punkt im Kuerzel", !kuerzel("Frank", "Wagner").includes("."), "");
 
   const m = initialenMap(bau());
-  gleich("Michel Brunner", m["michel.brunner"], "MB");
+  gleich("Frank Wagner", m["frank.wagner"], "FW");
   gleich("Maria Brandt", m["maria.brandt"], "MB");
   gleich("Tim Klein", m["extern:tim.klein.2011"], "TK");
 }
 {
-  // ⚠️ Gleiche Kuerzel sind jetzt AUSDRUECKLICH erlaubt (Michel-Vorgabe). Der Test
+  // ⚠️ Gleiche Kuerzel sind jetzt AUSDRUECKLICH erlaubt (ausdrueckliche Vorgabe). Der Test
   // haelt das fest, damit ein spaeterer Lauf es nicht als Bug "repariert".
   const a = normalizeAktion({ id: "a", name: "A", artikel: [], bestellungen: {
     "jan.hartmann": { vorname: "Jan", nachname: "Hartmann", positionen: [] },
@@ -196,17 +196,17 @@ gleich("leere Aktion: leere Kuerzel-Liste",
 console.log("\n4. Ausgabe");
 {
   const a = bau({ offen: false, abgeschlossen: true });
-  gleich("nichts ausgegeben", ausgabeStand(a, "michel.brunner"), { ausgegeben: 0, gesamt: 2 });
+  gleich("nichts ausgegeben", ausgabeStand(a, "frank.wagner"), { ausgegeben: 0, gesamt: 2 });
 
-  a.ausgabe["michel.brunner"] = { hoodie: { am: "2026-09-09T10:00:00.000Z", von: "admin" } };
-  gleich("ein Teil ausgegeben", ausgabeStand(a, "michel.brunner"), { ausgegeben: 1, gesamt: 2 });
-  gleich("Haken wird gefunden", istAusgegeben(a, "michel.brunner", "hoodie"), true);
-  gleich("anderer Artikel bleibt offen", istAusgegeben(a, "michel.brunner", "polo"), false);
+  a.ausgabe["frank.wagner"] = { hoodie: { am: "2026-09-09T10:00:00.000Z", von: "admin" } };
+  gleich("ein Teil ausgegeben", ausgabeStand(a, "frank.wagner"), { ausgegeben: 1, gesamt: 2 });
+  gleich("Haken wird gefunden", istAusgegeben(a, "frank.wagner", "hoodie"), true);
+  gleich("anderer Artikel bleibt offen", istAusgegeben(a, "frank.wagner", "polo"), false);
 
   // Der Kern von f-zaehlwerk: ein Haken auf einem Artikel, der NICHT mehr
   // bestellt ist, darf die Zahl nicht ueber die Zahl der Teile treiben.
-  a.ausgabe["michel.brunner"]["nicht-bestellt"] = { am: "2026-09-09T10:00:00.000Z", von: "admin" };
-  gleich("verwaister Haken zaehlt nicht mit", ausgabeStand(a, "michel.brunner"), { ausgegeben: 1, gesamt: 2 });
+  a.ausgabe["frank.wagner"]["nicht-bestellt"] = { am: "2026-09-09T10:00:00.000Z", von: "admin" };
+  gleich("verwaister Haken zaehlt nicht mit", ausgabeStand(a, "frank.wagner"), { ausgegeben: 1, gesamt: 2 });
 
   gleich("Person ohne Haken", ausgabeStand(a, "maria.brandt"), { ausgegeben: 0, gesamt: 1 });
   gleich("unbekannte Person kippt nicht", ausgabeStand(a, "gibt.es.nicht"), { ausgegeben: 0, gesamt: 0 });
@@ -218,7 +218,7 @@ console.log("\n4. Ausgabe");
 console.log("\n5. Verteilliste");
 {
   const a = bau({ offen: false, abgeschlossen: true });
-  a.ausgabe["michel.brunner"] = { hoodie: { am: "2026-09-09T10:00:00.000Z", von: "admin" } };
+  a.ausgabe["frank.wagner"] = { hoodie: { am: "2026-09-09T10:00:00.000Z", von: "admin" } };
   const z = personenZeilen(a);
 
   gleich("eine Zeile je bestellter Position", z.length, 4);
@@ -228,21 +228,24 @@ console.log("\n5. Verteilliste");
   const spalten = sandbox.__konstanten.EXPORT_FELDER.person.map((f) => f.key);
   const sichtbar = JSON.stringify(z.map((r) => Object.fromEntries(spalten.map((k) => [k, r[k]]))));
   zusage("kein Vor- oder Nachname in den Spalten",
-    !/Brunner|Michel|Klein|Brandt|Maria/i.test(sichtbar), sichtbar);
+    !/Wagner|Frank|Klein|Brandt|Maria/i.test(sichtbar), sichtbar);
   gleich("Spalte Kuerzel ist dabei", spalten.includes("kuerzel"), true);
 
-  const hoodieMichel = z.find((r) => r.artikelId === "hoodie" && r.groesse === "L");
-  gleich("Kuerzel im Export ist zweistellig", hoodieMichel && hoodieMichel.kuerzel, "MB");
+  const hoodieWagner = z.find((r) => r.artikelId === "hoodie" && r.groesse === "L");
+  gleich("Kuerzel im Export ist zweistellig", hoodieWagner && hoodieWagner.kuerzel, "FW");
   zusage("ausgegebene Zeile traegt ein Datum",
-    !!hoodieMichel && hoodieMichel.ausgegeben.startsWith("ausgegeben "), JSON.stringify(hoodieMichel));
-  const poloMichel = z.find((r) => r.artikelId === "polo");
-  gleich("offene Zeile traegt ein Kaestchen", poloMichel && poloMichel.ausgegeben, "[  ]");
+    !!hoodieWagner && hoodieWagner.ausgegeben.startsWith("ausgegeben "), JSON.stringify(hoodieWagner));
+  const poloWagner = z.find((r) => r.artikelId === "polo");
+  gleich("offene Zeile traegt ein Kaestchen", poloWagner && poloWagner.ausgegeben, "[  ]");
 
   // Zwei Leute mit demselben Kuerzel: ihre Zeilen duerfen sich nicht mischen,
   // sonst ist auf der ausgedruckten Liste kein Beutel mehr zuzuordnen.
   const d = bau({ offen: false, abgeschlossen: true });
-  d.bestellungen["michel.brandt"] = { vorname: "Michel", nachname: "Brandt", positionen: [
+  d.bestellungen["marta.brandt"] = { vorname: "Marta", nachname: "Brandt", positionen: [
     { artikelId: "hoodie", groesse: "M", menge: 1 }, { artikelId: "polo", groesse: "L", menge: 1 }
+  ] };
+  d.bestellungen["mia.baum"] = { vorname: "Mia", nachname: "Baum", positionen: [
+    { artikelId: "hoodie", groesse: "XL", menge: 1 }
   ] };
   const zd = personenZeilen(d);
   const mb = zd.filter((r) => r.kuerzel === "MB").map((r) => r.schluessel);
@@ -259,11 +262,11 @@ console.log("\n5. Verteilliste");
 
   // Menge 0 oder fehlender Artikel fallen heraus statt als Geisterzeile zu landen.
   const b = bau({ offen: false, abgeschlossen: true });
-  b.bestellungen["michel.brunner"].positionen.push({ artikelId: "hoodie", groesse: "M", menge: 0 });
+  b.bestellungen["frank.wagner"].positionen.push({ artikelId: "hoodie", groesse: "M", menge: 0 });
   gleich("Menge 0 faellt heraus", personenZeilen(b).length, 4);
 
   const c = bau({ offen: false, abgeschlossen: true });
-  c.bestellungen["michel.brunner"].positionen.push({ artikelId: "weg", groesse: "M", menge: 1 });
+  c.bestellungen["frank.wagner"].positionen.push({ artikelId: "weg", groesse: "M", menge: 1 });
   const zc = personenZeilen(c);
   gleich("geloeschter Artikel bleibt sichtbar", zc.length, 5);
   zusage("geloeschter Artikel ist benannt",
