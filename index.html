@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>👕 Kleiderbestellung</title>
 <meta name="theme-color" content="#1a56a0" />
-<link rel="stylesheet" href="style.css?v=1.2" />
+<link rel="stylesheet" href="style.css?v=1.3" />
 </head>
 <body>
 
@@ -156,10 +156,24 @@
 
       <div class="card">
         <div class="card-header-row">
+          <h2>Ausgabe</h2>
+        </div>
+        <p class="muted">Erscheint erst, wenn eine Bestellaktion <strong>abgeschlossen</strong> ist — also beim Lieferanten aufgegeben. Jedes ausgegebene Teil wird hier abgehakt und dem Besteller zugebucht. Das Kürzel links ist auf dieser Liste eindeutig und passt zur Verteilliste im Export.</p>
+        <p class="muted" id="ausgabe-error" style="display:none; color:#c0392b;"></p>
+        <div class="empty-state" id="ausgabe-empty" style="display:none;">Noch keine abgeschlossene Bestellaktion. Eine Aktion erst schließen, dann über „Bestellung abschließen“ freigeben.</div>
+        <div id="ausgabe-rows"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header-row">
           <h2>Export</h2>
         </div>
-        <p class="muted">Zusammenfassung der Bestellungen, gruppiert nach Artikel und Größe — z.B. zum Weiterreichen an einen Lieferanten. Wähle eine einzelne Bestellaktion oder alle zusammen (dann steht jede Aktion in einem eigenen Abschnitt).</p>
+        <p class="muted">Zwei Listen: die <strong>Zusammenfassung</strong> geht an den Lieferanten (nach Artikel und Größe summiert), die <strong>Verteilliste</strong> begleitet die Ausgabe (eine Zeile je Person und Teil, mit Kürzel statt Namen und einem Kästchen zum Abhaken). Wähle eine einzelne Bestellaktion oder alle zusammen (dann steht jede Aktion in einem eigenen Abschnitt).</p>
         <div class="form-grid">
+          <div class="form-field"><label for="export-inhalt">Inhalt</label><select id="export-inhalt">
+            <option value="artikel">Zusammenfassung nach Artikel und Größe (Lieferant)</option>
+            <option value="person">Verteilliste je Person mit Kürzel (Ausgabe)</option>
+          </select></div>
           <div class="form-field"><label for="export-aktion">Bestellaktion</label><select id="export-aktion"></select></div>
         </div>
         <div class="btn-row" style="justify-content:flex-start;">
@@ -176,12 +190,12 @@
 <!-- Druckbereich (nur für PDF-Export sichtbar) -->
 <div id="print-area"><div id="print-content"></div></div>
 
-<script src="config.js?v=1.4"></script>
+<script src="config.js?v=1.5"></script>
 <script src="db.js?v=1.0"></script>
 <!-- Selbstgeschriebener QR-Encoder, byte-genau aus dem Kadermanager übernommen
      (dort gegen die Referenzimplementierung segno verifiziert). Kein CDN: der
      Token im Link würde sonst bei jedem Aufruf an einen fremden Server gemeldet. -->
 <script src="qrcode.js?v=1.0"></script>
-<script src="app.js?v=1.3"></script>
+<script src="app.js?v=1.4"></script>
 </body>
 </html>

@@ -27,7 +27,9 @@ const APP_FUNKTIONEN = [
       "Es laufen beliebig viele Bestellaktionen nebeneinander — zum Beispiel Trainerpaket, Spielerpaket und Funktionärspaket.",
       "Jede Aktion ist ein eigenes aufklappbares Feld mit eigenen Artikeln, eigenem Hinweistext, eigenem Kommentar und eigenem Speichern-Knopf. Die Kopfzeile zeigt schon zugeklappt, ob die eigene Bestellung steht.",
       "Jede Aktion hat ihr eigenes Bestellfenster: eine kann beim Lieferanten und damit geschlossen sein, während eine andere noch läuft.",
-      "Eine geschlossene Aktion sehen nur noch die, die dort auch bestellt haben; ihre Bestellungen sind dann nur noch lesbar."
+      "Eine geschlossene Aktion sehen nur noch die, die dort auch bestellt haben; ihre Bestellungen sind dann nur noch lesbar.",
+      "Eine Aktion durchläuft drei Zustände: „läuft“ (es wird bestellt), „geschlossen“ (die Bestellung wird zusammengestellt) und „abgeschlossen“ (beim Lieferanten aufgegeben). Abschließen geht erst nach dem Schließen; zurücknehmen lässt es sich jederzeit.",
+      "Mit dem Abschluss wird die Ausgabeliste freigeschaltet."
     ]
   },
   {
@@ -59,11 +61,22 @@ const APP_FUNKTIONEN = [
     ]
   },
   {
+    title: "Ausgabe abhaken",
+    items: [
+      "Sobald eine Bestellaktion abgeschlossen ist, steht in den Einstellungen eine Ausgabeliste: je Person jedes bestellte Teil einzeln zum Abhaken.",
+      "Jeder Haken merkt sich Datum und Uhrzeit und wird sofort gespeichert. „Alles ausgeben“ hakt eine ganze Person auf einmal ab, „Ausgabe zurücknehmen“ macht das wieder rückgängig.",
+      "Jede Person trägt ein Kürzel aus ihren Initialen — zum Beschriften des Beutels. Haben zwei dasselbe Kürzel, wird der Nachname so weit ausgeschrieben, bis die Kürzel eindeutig sind.",
+      "Wer bestellt hat, sieht am eigenen Formular, welche Teile schon ausgegeben sind.",
+      "Der Kopf jeder Aktion zeigt, wie viele Teile insgesamt schon heraus sind."
+    ]
+  },
+  {
     title: "Übersicht und Bestellliste",
     items: [
       "Tabelle aller abgegebenen Bestellungen mit Name, Positionen und letzter Änderung — jede Bestellaktion als eigener aufklappbarer Abschnitt mit eigener Summe.",
       "Bestellungen über den Spieler-Link sind gekennzeichnet, tragen den Jahrgang und zählen ganz normal mit.",
       "Export als Text- oder PDF-Datei, gruppiert nach Artikel und Größe — so lässt sie sich direkt an den Lieferanten weiterreichen.",
+      "Alternativ die Verteilliste: eine Zeile je Person und Teil, mit Kürzel statt Namen und einem Kästchen zum Abhaken. Schon ausgegebene Teile tragen dort das Datum statt des Kästchens.",
       "Der Export lässt sich auf eine einzelne Bestellaktion einschränken; „Alle Bestellaktionen“ liefert eine Datei mit einem Abschnitt je Aktion."
     ]
   },
@@ -81,7 +94,7 @@ const APP_FUNKTIONEN = [
     items: [
       "Sehen: das Bestellformular schreibgeschützt mit Hinweis. Eine Bestellung abgeben geht nicht, auch nicht am Bildschirm vorbei.",
       "Bearbeiten: die eigene Bestellung aufgeben und ändern.",
-      "Administrieren: Bestellaktionen anlegen und schließen, den Artikelkatalog pflegen, die Gesamtübersicht einsehen, fremde Bestellungen löschen, die Bestellliste exportieren und die Links für Spieler verwalten.",
+      "Administrieren: Bestellaktionen anlegen, schließen und abschließen, den Artikelkatalog pflegen, die Gesamtübersicht einsehen, die Ausgabe abhaken, fremde Bestellungen löschen, die Listen exportieren und die Links für Spieler verwalten.",
       "Der Reiter „Info“ ist für alle sichtbar."
     ]
   },
@@ -103,6 +116,22 @@ const APP_FUNKTIONEN = [
 ];
 
 const APP_CHANGELOG = [
+  {
+    version: "1.5",
+    groups: [
+      {
+        title: "Bestellung abschließen und die Ausgabe abhaken",
+        items: [
+          "Eine geschlossene Bestellaktion lässt sich jetzt abschließen — das heißt: die Bestellung ist beim Lieferanten aufgegeben. Der Knopf steht neben „Schließen“ und ist erst nach dem Schließen da.",
+          "Mit dem Abschluss erscheint in den Einstellungen die neue Karte „Ausgabe“: je Person jedes bestellte Teil einzeln zum Abhaken, mit Datum und Uhrzeit. „Alles ausgeben“ hakt eine ganze Person auf einmal ab.",
+          "Jede Person trägt dort ein eindeutiges Kürzel aus ihren Initialen, zum Beschriften des Beutels. Zwei gleiche Kürzel werden automatisch unterschieden.",
+          "Neu im Export: die Verteilliste. Eine Zeile je Person und Teil, mit Kürzel statt Namen und einem Kästchen zum Abhaken — zum Ausdrucken für die Ausgabe. Die bisherige Liste für den Lieferanten bleibt unverändert und ist weiterhin die Vorauswahl.",
+          "Wer bestellt hat, sieht am eigenen Formular, welche Teile schon ausgegeben sind.",
+          "Ein Abschluss lässt sich zurücknehmen; die bereits abgehakte Ausgabe bleibt dabei erhalten. Wieder öffnen geht erst danach."
+        ]
+      }
+    ]
+  },
   {
     version: "1.4",
     groups: [

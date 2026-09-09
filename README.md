@@ -28,13 +28,23 @@ zwei gleichnamige Spieler.
    Jede Aktion kann einen eigenen Hinweistext tragen, der über den Artikeln steht.
 2. Wer bestellen will, wählt Artikel und Größe unter **Meine Bestellung**.
    Spieler und Eltern ohne Konto bekommen dafür einen eigenen Link mit QR-Code.
-3. Ist das Bestellfenster geschlossen, steht die **Bestellungsübersicht**, und der
+3. Ist das Bestellfenster **geschlossen**, steht die **Bestellungsübersicht**, und der
    **Export** liefert die Liste für den Lieferanten — nach Artikel und Größe
    gruppiert, als Text oder PDF.
+4. Ist die Bestellung beim Lieferanten aufgegeben, wird die Aktion **abgeschlossen**.
+   Damit erscheint die **Ausgabe**: je Person jedes bestellte Teil einzeln zum
+   Abhaken, mit Datum. Dazu passt die zweite Exportart, die **Verteilliste** —
+   eine Zeile je Person und Teil, mit Kürzel statt Namen.
 
-Jede Aktion hat ihr eigenes Bestellfenster: eine kann beim Lieferanten und damit
-geschlossen sein, während eine andere noch läuft. Geschlossene Aktionen sehen nur
-noch die, die dort bestellt haben.
+Eine Aktion durchläuft also drei Zustände: *läuft* → *geschlossen* → *abgeschlossen*.
+Abschließen geht erst nach dem Schließen; zurücknehmen jederzeit, die bereits
+abgehakte Ausgabe bleibt dabei erhalten. Jede Aktion hat ihr eigenes Bestellfenster:
+eine kann beim Lieferanten und damit geschlossen sein, während eine andere noch
+läuft. Geschlossene Aktionen sehen nur noch die, die dort bestellt haben.
+
+Auf der Verteilliste steht statt des Namens ein **Kürzel** aus den Initialen
+(„M.B."), passend zum beschrifteten Beutel. Haben zwei Personen dasselbe Kürzel,
+wird der Nachname so weit ausgeschrieben, bis die Kürzel eindeutig sind.
 
 Die Menge gibt in der Regel der Verein über den Katalog vor. Steht dort die
 Standardmenge 0, trägt der Besteller sie selbst ein.
@@ -52,7 +62,7 @@ Familien über die
 
 Die Anmeldung läuft über die [Tools-Übersicht](https://sc1911heiligenstadt.github.io/ToolsUebersicht/) — dort einmal anmelden, danach ist dieses Werkzeug offen. Die Spieler-Seite braucht **keine Anmeldung**, sondern nur den persönlichen Link.
 
-Die Rechte gelten in drei Stufen: **Sehen** (den Artikelkatalog und die eigene Bestellung ansehen), **Bearbeiten** (die eigene Bestellung abgeben und ändern, solange das Bestellfenster offen ist) und **Administrieren** (Reiter *Einstellungen*: Artikelkatalog und Bestellaktionen pflegen, Bestellungsübersicht, Export, fremde Bestellungen löschen und die Links für Spieler verwalten). Wer welche Stufe hat, legt die Tools-Übersicht fest.
+Die Rechte gelten in drei Stufen: **Sehen** (den Artikelkatalog und die eigene Bestellung ansehen), **Bearbeiten** (die eigene Bestellung abgeben und ändern, solange das Bestellfenster offen ist) und **Administrieren** (Reiter *Einstellungen*: Artikelkatalog und Bestellaktionen pflegen, Aktionen schließen und abschließen, Bestellungsübersicht, die Ausgabe abhaken, Export, fremde Bestellungen löschen und die Links für Spieler verwalten). Wer welche Stufe hat, legt die Tools-Übersicht fest.
 
 ## Lokal starten
 

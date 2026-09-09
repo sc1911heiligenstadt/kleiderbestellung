@@ -15,6 +15,8 @@ let currentMannschaften = [];
 
 // Aktion, deren Bestellliste im Export-Panel ausgewählt ist ("" = alle Aktionen).
 let exportAktionId = "";
+// "artikel" = Summen fuer den Lieferanten, "person" = Verteilliste mit Kuerzeln.
+let exportInhalt = "artikel";
 
 // Auf/zu-Zustand der aufklappbaren Felder, über die kompletten Re-Renders hinweg
 // (innerHTML baut alles neu — ohne Merker klappte nach jedem Speichern alles
@@ -23,6 +25,7 @@ let exportAktionId = "";
 let offeneBestellKarten = null;
 const offeneKatalogGruppen = new Set();
 const offeneUebersichtGruppen = new Set();
+const offeneAusgabeGruppen = new Set();
 
 // Liest den aktuellen Auf/zu-Zustand der <details data-aktion-id> eines Containers
 // in das Merker-Set zurück — unmittelbar VOR dem Neuaufbau per innerHTML. Bewusst
@@ -71,8 +74,10 @@ function deriveNameFromUsername(username) {
 
 // ---------- Datenmodell ----------
 //
-// { aktionen: [ { id, name, offen, artikel: [ {id, name, groessen, standardMenge, aktiv} ],
-//                 bestellungen: { "<username>": {vorname, nachname, positionen, kommentar, letzteAenderung} } } ] }
+// { aktionen: [ { id, name, offen, abgeschlossen, abgeschlossenAm,
+//                 artikel: [ {id, name, groessen, standardMenge, aktiv} ],
+//                 bestellungen: { "<username>": {vorname, nachname, positionen, kommentar, letzteAenderung} },
+//                 ausgabe: { "<username>": { "<artikelId>": {am, von} } } } ] }
 //
 // Jede Bestellaktion (Trainerpaket, Spielerpaket, ...) trägt ihre eigenen Artikel,
 // ihr eigenes Bestellfenster und ihre eigenen Bestellungen. Positionen zeigen immer
@@ -84,6 +89,14 @@ function normalizeAktion(a, index) {
   if (typeof x.name !== "string" || !x.name.trim()) x.name = "Bestellaktion " + (index + 1);
   if (typeof x.offen !== "boolean") x.offen = true;
   if (typeof x.hinweis !== "string") x.hinweis = "";
+  // Dritter Zustand nach "laeuft" und "geschlossen": die Bestellung ist beim
+  // Lieferanten aufgegeben. Erst ab da wird die Ausgabe abgehakt.
+  if (typeof x.abgeschlossen !== "boolean") x.abgeschlossen = false;
+  if (typeof x.abgeschlossenAm !== "string") x.abgeschlossenAm = "";
+  // Die Ausgabe-Haken liegen BEWUSST neben den Bestellungen und nicht in den
+  // Positionen: eine Bestellung wird beim Speichern komplett ersetzt
+  // (bestellungen[username] = {...}), ein Haken in der Position waere danach weg.
+  if (!x.ausgabe || typeof x.ausgabe !== "object") x.ausgabe = {};
   if (!Array.isArray(x.artikel)) x.artikel = [];
   if (!x.bestellungen || typeof x.bestellungen !== "object") x.bestellungen = {};
   for (const b of Object.values(x.bestellungen)) {
@@ -123,6 +136,109 @@ function normalizeAppData(data) {
   delete d.bestellungen;
   delete d.bestellfensterOffen;
   return d;
+}
+
+// ---------- Status einer Bestellaktion ----------
+//
+// Drei Zustaende, immer in dieser Reihenfolge:
+//   laeuft         offen !== false                      es wird bestellt
+//   geschlossen    offen === false                      Bestellung wird zusammengestellt
+//   abgeschlossen  offen === false && abgeschlossen      beim Lieferanten aufgegeben
+//
+// "abgeschlossen" setzt "geschlossen" voraus. Wieder oeffnen geht erst, wenn der
+// Abschluss zurueckgenommen wurde -- sonst stuende eine laufende Bestellaktion mit
+// bereits abgehakter Ausgabeliste da, und beides zugleich ergibt keinen Sinn.
+
+function istAbgeschlossen(aktion) {
+  return aktion.offen === false && aktion.abgeschlossen === true;
+}
+
+function aktionStatus(aktion) {
+  if (aktion.offen !== false) return { klasse: "offen", label: "läuft" };
+  if (aktion.abgeschlossen === true) return { klasse: "fertig", label: "abgeschlossen" };
+  return { klasse: "zu", label: "geschlossen" };
+}
+
+// ---------- Kuerzel (Initialen) ----------
+//
+// Auf der Verteilliste steht nur "M.B." statt des vollen Namens: die Liste liegt
+// beim Ausgeben offen auf dem Tisch, und der Beutel traegt dasselbe Kuerzel.
+//
+// Zwei Leute mit denselben Initialen waeren auf genau dieser Liste nicht mehr
+// auseinanderzuhalten -- und Auseinanderhalten ist ihr einziger Zweck. Deshalb
+// wird der Nachname buchstabenweise verlaengert (M.B. -> M.Br. / M.Bu.), bis die
+// Kuerzel innerhalb der Aktion eindeutig sind. Bleiben zwei gleich (wirklich
+// gleicher Name), haengt eine laufende Nummer dran.
+
+function kuerzel(vorname, nachname, laenge) {
+  const v = String(vorname || "").trim();
+  const n = String(nachname || "").trim();
+  const teil = n.slice(0, Math.max(1, laenge));
+  const vk = v ? v.charAt(0).toUpperCase() + "." : "";
+  const nk = teil ? teil.charAt(0).toUpperCase() + teil.slice(1) + "." : "";
+  return (vk + nk) || "?";
+}
+
+// schluessel -> eindeutiges Kuerzel, eindeutig innerhalb EINER Bestellaktion.
+function initialenMap(aktion) {
+  const leute = Object.entries(aktion.bestellungen).map(([schluessel, b]) => ({
+    schluessel,
+    vorname: (b && b.vorname) || "",
+    nachname: (b && b.nachname) || ""
+  }));
+  const maxLaenge = leute.reduce((m, p) => Math.max(m, p.nachname.length), 1);
+  const map = {};
+  let offen = leute;
+  for (let laenge = 1; laenge <= maxLaenge && offen.length; laenge++) {
+    const proKuerzel = new Map();
+    for (const p of offen) {
+      const k = kuerzel(p.vorname, p.nachname, laenge);
+      if (!proKuerzel.has(k)) proKuerzel.set(k, []);
+      proKuerzel.get(k).push(p);
+    }
+    const rest = [];
+    for (const gruppe of proKuerzel.values()) {
+      if (gruppe.length === 1) map[gruppe[0].schluessel] = kuerzel(gruppe[0].vorname, gruppe[0].nachname, laenge);
+      else rest.push(...gruppe);
+    }
+    offen = rest;
+  }
+  // Rest: wirklich gleicher Name (oder gar keiner) -- durchnummerieren, damit die
+  // Zeilen auf der Ausgabeliste trotzdem unterscheidbar bleiben. Sortiert nach
+  // Schluessel, damit dieselbe Person zwischen zwei Exporten dieselbe Nummer behaelt.
+  offen.sort((a, b) => a.schluessel.localeCompare(b.schluessel, "de"));
+  offen.forEach((p, i) => {
+    map[p.schluessel] = kuerzel(p.vorname, p.nachname, maxLaenge) + " (" + (i + 1) + ")";
+  });
+  return map;
+}
+
+// ---------- Ausgabe ----------
+//
+// aktion.ausgabe[schluessel][artikelId] = { am, von }
+//
+// Ein Haken je bestellter Zeile. Der Schluessel ist der ARTIKEL, nicht die Groesse:
+// je Person und Artikel gibt es genau eine Position -- so sammelt das Bestellformular
+// ein (collectPositionenFromCard), und so nimmt der Worker auch den externen Weg an.
+
+function ausgabeVon(aktion, schluessel) {
+  const a = aktion.ausgabe && aktion.ausgabe[schluessel];
+  return (a && typeof a === "object") ? a : {};
+}
+
+function istAusgegeben(aktion, schluessel, artikelId) {
+  return !!ausgabeVon(aktion, schluessel)[artikelId];
+}
+
+// { ausgegeben, gesamt } ueber die tatsaechlich bestellten Positionen einer Person.
+// Gezaehlt wird ueber die POSITIONEN, nicht ueber die Haken: ein Haken auf einem
+// spaeter aus der Bestellung gefallenen Artikel bleibt liegen und wuerde die Zahl
+// sonst ueber die Zahl der Teile hinaus aufblaehen ("6 von 5 ausgegeben").
+function ausgabeStand(aktion, schluessel) {
+  const b = aktion.bestellungen[schluessel] || {};
+  const positionen = (b.positionen || []).filter((p) => p && p.artikelId);
+  const ausgegeben = positionen.filter((p) => istAusgegeben(aktion, schluessel, p.artikelId)).length;
+  return { ausgegeben, gesamt: positionen.length };
 }
 
 function findAktion(aktionId, data) {
@@ -245,6 +361,12 @@ function showAktionenError(msg) {
   el.style.display = msg ? "block" : "none";
 }
 
+function showAusgabeError(msg) {
+  const el = document.getElementById("ausgabe-error");
+  el.textContent = msg || "";
+  el.style.display = msg ? "block" : "none";
+}
+
 function showUebersichtError(msg) {
   const el = document.getElementById("uebersicht-error");
   el.textContent = msg || "";
@@ -267,7 +389,11 @@ function renderBestellAktionCard(aktion) {
   const mine = meineBestellung(aktion);
   const aktiveArtikel = aktion.artikel.filter((a) => a.aktiv !== false || hatPosition(mine, a.id));
 
-  const bannerText = !offen
+  const status = aktionStatus(aktion);
+  const abgeschlossen = istAbgeschlossen(aktion);
+  const bannerText = abgeschlossen
+    ? "📦 Diese Bestellaktion ist abgeschlossen — die Bestellung ist beim Lieferanten aufgegeben. Änderungen sind nicht mehr möglich."
+    : !offen
     ? "🔒 Diese Bestellaktion ist geschlossen — Änderungen sind nicht mehr möglich. Bei Fragen wende dich an den Admin."
     : "👁 Nur Ansicht — Bestellungen aufgeben ist Bearbeitern vorbehalten.";
   const bannerHtml = bearbeitbar ? "" : `<div class="fenster-banner">${escapeHtml(bannerText)}</div>`;
@@ -288,6 +414,13 @@ function renderBestellAktionCard(aktion) {
           ? "Bei diesem Artikel wählst du die Menge selbst."
           : "Die Menge ist je Artikel fest vom Verein vorgegeben.";
         const inaktivLabel = a.aktiv === false ? " (nicht mehr bestellbar)" : "";
+        // Ist die Aktion abgeschlossen, sieht jede und jeder am eigenen Formular,
+        // welche Teile schon abgeholt sind -- dieselbe Wahrheit wie in der
+        // Ausgabeliste des Admins, nur auf die eigene Bestellung beschraenkt.
+        const ausgabeEintrag = (abgeschlossen && pos) ? ausgabeVon(aktion, currentUsername)[a.id] : null;
+        const ausgegebenBadge = ausgabeEintrag
+          ? ` <span class="ausgabe-badge" title="Ausgegeben am ${escapeHtml(fmtDate(ausgabeEintrag.am))}">✔ ausgegeben</span>`
+          : "";
         // Eine bereits bestellte Groesse, die inzwischen aus dem Katalog
         // genommen oder umbenannt wurde, MUSS trotzdem als Option dastehen.
         // Sonst war keine Option `selected`, der Browser zeigte "— keine
@@ -299,7 +432,7 @@ function renderBestellAktionCard(aktion) {
         const fehlendeGroesse = groesse && katalogGroessen.indexOf(groesse) < 0 ? groesse : "";
         return `
         <div class="bestell-row" data-artikel-id="${escapeHtml(a.id)}">
-          <span class="bestell-artikel-name">${escapeHtml(a.name)}${inaktivLabel}</span>
+          <span class="bestell-artikel-name">${escapeHtml(a.name)}${inaktivLabel}${ausgegebenBadge}</span>
           <select class="bestell-groesse" ${bearbeitbar ? "" : "disabled"}>
             <option value="">— keine Auswahl —</option>
             ${katalogGroessen.map((g) => `<option value="${escapeHtml(g)}" ${g === groesse ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
@@ -320,7 +453,7 @@ function renderBestellAktionCard(aktion) {
       <summary class="accordion-summary">
         <h2>${escapeHtml(aktion.name)}</h2>
         ${kurzinfo}
-        <span class="aktion-status ${offen ? "offen" : "zu"}">${offen ? "läuft" : "geschlossen"}</span>
+        <span class="aktion-status ${status.klasse}">${status.label}</span>
       </summary>
       <div class="accordion-body">
         ${bannerHtml}
@@ -485,18 +618,37 @@ function renderAktionenVerwaltung() {
     const anzahl = alle.length;
     const extern = alle.filter((b) => b.quelle === "extern").length;
     const externMeta = extern ? ` (davon ${extern} über den Link)` : "";
+    const status = aktionStatus(a);
+    const abgeschlossen = istAbgeschlossen(a);
+    // Nach dem Abschluss ist der Ausgabestand die Zahl, auf die es hier ankommt.
+    const stand = abgeschlossen
+      ? Object.keys(a.bestellungen).reduce((acc, k) => {
+          const st = ausgabeStand(a, k);
+          return { ausgegeben: acc.ausgegeben + st.ausgegeben, gesamt: acc.gesamt + st.gesamt };
+        }, { ausgegeben: 0, gesamt: 0 })
+      : null;
+    const abschlussMeta = abgeschlossen
+      ? `${a.abgeschlossenAm ? " am " + escapeHtml(fmtDate(a.abgeschlossenAm)) : ""} · ${stand.ausgegeben} von ${stand.gesamt} Teilen ausgegeben`
+      : "";
+    // Wieder oeffnen erst nach dem Zuruecknehmen des Abschlusses -- sonst liefe eine
+    // Bestellaktion, deren Ausgabeliste bereits abgehakt wird.
+    const toggleBtn = abgeschlossen ? "" :
+      `<button type="button" class="btn secondary small btn-toggle-aktion">${offen ? "Schließen" : "Wieder öffnen"}</button>`;
+    const abschlussBtn = offen ? "" :
+      `<button type="button" class="btn secondary small btn-abschluss-aktion">${abgeschlossen ? "Abschluss zurücknehmen" : "Bestellung abschließen"}</button>`;
     return `
     <div class="aktion-row-wrap" data-aktion-id="${escapeHtml(a.id)}">
-      <div class="aktion-row ${offen ? "" : "zu"}">
+      <div class="aktion-row ${offen ? "" : "zu"}${abgeschlossen ? " fertig" : ""}">
         <div class="aktion-row-main">
           <input type="text" class="aktion-name" value="${escapeHtml(a.name)}" />
           <textarea class="aktion-hinweis-feld" rows="2" placeholder="Hinweis für die Bestellenden (optional) — steht im Bestellformular über den Artikeln, z.B. zur Kostenübernahme">${escapeHtml(a.hinweis || "")}</textarea>
-          <span class="muted aktion-row-meta">${a.artikel.length} Artikel · ${anzahl} Bestellung${anzahl === 1 ? "" : "en"}${externMeta} · ${offen ? "läuft" : "geschlossen"}</span>
+          <span class="muted aktion-row-meta">${a.artikel.length} Artikel · ${anzahl} Bestellung${anzahl === 1 ? "" : "en"}${externMeta} · ${status.label}${abschlussMeta}</span>
         </div>
         <div class="aktion-row-actions">
           <button type="button" class="btn secondary small btn-save-aktion">Speichern</button>
           <button type="button" class="btn secondary small btn-extern-aktion">${offenesExternPanel === a.id ? "Link ausblenden" : "🔗 Link für Spieler"}</button>
-          <button type="button" class="btn secondary small btn-toggle-aktion">${offen ? "Schließen" : "Wieder öffnen"}</button>
+          ${toggleBtn}
+          ${abschlussBtn}
           <button type="button" class="btn secondary small btn-delete-aktion">Entfernen</button>
         </div>
       </div>
@@ -746,9 +898,41 @@ async function updateAktion(aktionId, changes) {
 async function toggleAktion(aktionId) {
   const aktion = findAktion(aktionId);
   if (!aktion) return;
+  // Der Knopf steht bei einer abgeschlossenen Aktion gar nicht erst da. Diese
+  // zweite, davon unabhaengige Schranke faengt den Weg ueber die Konsole ab.
+  if (istAbgeschlossen(aktion)) {
+    showAktionenError(`"${aktion.name}" ist abgeschlossen. Erst den Abschluss zurücknehmen, dann lässt sich die Aktion wieder öffnen.`);
+    return;
+  }
   const offen = aktion.offen !== false;
   if (offen && !confirm(`Bestellaktion "${aktion.name}" wirklich schließen? Bestellungen lassen sich danach nicht mehr ändern.`)) return;
   await updateAktion(aktionId, { offen: !offen });
+}
+
+// "Abschließen" heißt: die Bestellung ist beim Lieferanten aufgegeben. Ab da
+// aendert sich nichts mehr an den Bestellungen, und die Ausgabeliste wird frei.
+//
+// Der Abschluss haengt an "geschlossen": eine laufende Aktion laesst sich nicht
+// abschließen, sonst kaemen nach dem Abschluss noch Bestellungen dazu, die beim
+// Lieferanten nie ankamen -- und die stuenden dann trotzdem auf der Ausgabeliste.
+async function abschlussUmschalten(aktionId) {
+  if (!canAdmin()) return;
+  showAktionenError("");
+  const aktion = findAktion(aktionId);
+  if (!aktion) return;
+  if (aktion.offen !== false) {
+    showAktionenError("Erst schließen, dann abschließen — sonst kämen nach dem Abschluss noch Bestellungen dazu.");
+    return;
+  }
+  if (istAbgeschlossen(aktion)) {
+    // Die Haken bleiben liegen (aktion.ausgabe wird NICHT geleert): wer den
+    // Abschluss nur versehentlich gesetzt hat, verliert sonst die halbe Ausgabe.
+    if (!confirm(`Abschluss von "${aktion.name}" zurücknehmen? Die bereits abgehakte Ausgabe bleibt erhalten, die Ausgabeliste ist danach aber erst nach erneutem Abschließen wieder erreichbar.`)) return;
+    await updateAktion(aktionId, { abgeschlossen: false });
+    return;
+  }
+  if (!confirm(`Bestellaktion "${aktion.name}" abschließen? Damit gilt die Bestellung als beim Lieferanten aufgegeben, und die Ausgabeliste wird freigeschaltet.`)) return;
+  await updateAktion(aktionId, { abgeschlossen: true, abgeschlossenAm: new Date().toISOString() });
 }
 
 async function deleteAktion(aktionId) {
@@ -997,6 +1181,16 @@ function positionenLabel(positionen, artikelById) {
   return label || "—";
 }
 
+// Eine Zeile "Ausgabe: 3 von 5 Teilen" -- nur bei abgeschlossener Aktion, denn
+// vorher gibt es noch nichts, was ausgegeben werden koennte.
+function ausgabeZeile(aktion, schluessel) {
+  if (!istAbgeschlossen(aktion)) return "";
+  const st = ausgabeStand(aktion, schluessel);
+  if (!st.gesamt) return "";
+  const fertig = st.ausgegeben === st.gesamt;
+  return `<span class="muted">Ausgabe: ${st.ausgegeben} von ${st.gesamt} Teilen${fertig ? " ✔ vollständig" : ""}</span>`;
+}
+
 function renderBestellungsuebersicht() {
   const mitBestellungen = appData.aktionen.filter(aktionHatBestellungen);
   document.getElementById("uebersicht-empty").style.display = mitBestellungen.length ? "none" : "block";
@@ -1031,6 +1225,7 @@ function renderBestellungsuebersicht() {
             <span class="confirm-name">${escapeHtml((r.vorname + " " + r.nachname).trim() || r.schluessel)}${jahrgang}${badge}</span>
             <span class="muted">${escapeHtml(positionenLabel(r.positionen, artikelById))}</span>
             <span class="muted">Zuletzt geändert: ${escapeHtml(fmtDate(r.letzteAenderung))}${r.kommentar ? " — " + escapeHtml(r.kommentar) : ""}</span>
+            ${ausgabeZeile(aktion, r.schluessel)}
           </div>
           <div class="confirm-row-actions">
             ${resetBtn}
@@ -1095,6 +1290,100 @@ async function resetExternPasswort(aktionId, schluessel) {
   renderBestellungsuebersicht();
 }
 
+// ---------- Tab "Einstellungen": Ausgabe ----------
+//
+// Erst nach dem Abschluss einer Bestellaktion. Je Person eine Zeile je bestelltem
+// Teil zum Abhaken -- das ist die Liste, die beim Verteilen der Beutel danebenliegt.
+//
+// Jeder Haken speichert sofort (ein dav-save je Klick). Bewusst kein
+// Sammel-Speichern: wer beim Verteilen unterbrochen wird oder den Reiter schliesst,
+// haette sonst genau die Haken verloren, die er gerade gesetzt hat. Fuer die Faelle
+// mit vielen auf einmal gibt es "Alles ausgeben" -- ein Speichervorgang fuer die
+// ganze Person.
+
+function renderAusgabe() {
+  const aktionen = appData.aktionen.filter((a) => istAbgeschlossen(a) && aktionHatBestellungen(a));
+  document.getElementById("ausgabe-empty").style.display = aktionen.length ? "none" : "block";
+  const rows = document.getElementById("ausgabe-rows");
+  sammleAufklappZustand(rows, "details.ausgabe-gruppe", offeneAusgabeGruppen);
+  rows.innerHTML = aktionen.map((aktion) => {
+    const artikelById = Object.fromEntries(aktion.artikel.map((a) => [a.id, a]));
+    const initialen = initialenMap(aktion);
+    const leute = Object.entries(aktion.bestellungen)
+      .map(([schluessel, b]) => Object.assign({ schluessel }, b))
+      .filter((b) => (b.positionen || []).some((pos) => pos && pos.artikelId))
+      .sort((a, b) => (initialen[a.schluessel] || "").localeCompare(initialen[b.schluessel] || "", "de"));
+    const summe = leute.reduce((acc, r) => {
+      const st = ausgabeStand(aktion, r.schluessel);
+      return { ausgegeben: acc.ausgegeben + st.ausgegeben, gesamt: acc.gesamt + st.gesamt };
+    }, { ausgegeben: 0, gesamt: 0 });
+    return `
+      <details class="ausgabe-gruppe" data-aktion-id="${escapeHtml(aktion.id)}"${offeneAusgabeGruppen.has(aktion.id) ? " open" : ""}>
+        <summary class="gruppen-kopf">
+          <h3 class="katalog-gruppe-titel">${escapeHtml(aktion.name)}</h3>
+          <span class="muted gruppen-anzahl">${summe.ausgegeben} von ${summe.gesamt} Teilen ausgegeben</span>
+        </summary>
+        ${leute.map((r) => {
+          const st = ausgabeStand(aktion, r.schluessel);
+          const alleDa = st.gesamt > 0 && st.ausgegeben === st.gesamt;
+          const name = (r.vorname + " " + r.nachname).trim() || r.schluessel;
+          const jahrgang = r.quelle === "extern" && r.jahrgang ? ` (${escapeHtml(r.jahrgang)})` : "";
+          const posHtml = (r.positionen || []).filter((pos) => pos && pos.artikelId).map((pos) => {
+            const artikel = artikelById[pos.artikelId];
+            const artikelName = artikel ? artikel.name : `(gelöscht: ${pos.artikelId})`;
+            const eintrag = ausgabeVon(aktion, r.schluessel)[pos.artikelId];
+            return `
+            <label class="ausgabe-pos">
+              <input type="checkbox" class="ausgabe-haken" data-artikel-id="${escapeHtml(pos.artikelId)}" ${eintrag ? "checked" : ""} />
+              <span class="ausgabe-pos-text">${escapeHtml(artikelName)} ${escapeHtml(pos.groesse)} ×${escapeHtml(pos.menge)}</span>
+              <span class="muted ausgabe-pos-stempel">${eintrag ? "ausgegeben am " + escapeHtml(fmtDate(eintrag.am)) : ""}</span>
+            </label>`;
+          }).join("");
+          return `
+        <div class="ausgabe-person${alleDa ? " fertig" : ""}" data-aktion-id="${escapeHtml(aktion.id)}" data-schluessel="${escapeHtml(r.schluessel)}">
+          <div class="ausgabe-person-kopf">
+            <span class="ausgabe-kuerzel" title="Kürzel für den Beutel — auf dieser Liste eindeutig">${escapeHtml(initialen[r.schluessel] || "?")}</span>
+            <span class="confirm-name">${escapeHtml(name)}${jahrgang}</span>
+            <span class="muted ausgabe-person-stand">${st.ausgegeben} von ${st.gesamt}</span>
+            <button type="button" class="btn secondary small btn-ausgabe-alle" data-an="${alleDa ? "0" : "1"}">${alleDa ? "Ausgabe zurücknehmen" : "Alles ausgeben"}</button>
+          </div>
+          <div class="ausgabe-positionen">${posHtml}</div>
+        </div>`;
+        }).join("")}
+      </details>`;
+  }).join("");
+}
+
+// artikelIds leer = nichts zu tun. an=true setzt den Haken samt Zeitstempel,
+// an=false nimmt ihn wieder weg (Fehlgriff beim Verteilen).
+async function setzeAusgabe(aktionId, schluessel, artikelIds, an) {
+  if (!canAdmin()) return;
+  showAusgabeError("");
+  if (!artikelIds.length) return;
+  const stempel = { am: new Date().toISOString(), von: currentUsername || "" };
+  try {
+    await saveWithConflictRetry((data) => {
+      const a = findAktion(aktionId, data);
+      if (!a) throw new Error("Diese Bestellaktion gibt es nicht mehr.");
+      if (!istAbgeschlossen(a)) throw new Error("Diese Bestellaktion ist nicht mehr abgeschlossen — die Ausgabe ist damit gesperrt.");
+      if (!a.ausgabe || typeof a.ausgabe !== "object") a.ausgabe = {};
+      if (!a.ausgabe[schluessel] || typeof a.ausgabe[schluessel] !== "object") a.ausgabe[schluessel] = {};
+      for (const id of artikelIds) {
+        if (an) a.ausgabe[schluessel][id] = stempel;
+        else delete a.ausgabe[schluessel][id];
+      }
+      // Leere Huelle wieder abraeumen, damit die Datei nicht mit {} zuwaechst.
+      if (!Object.keys(a.ausgabe[schluessel]).length) delete a.ausgabe[schluessel];
+    });
+  } catch (e) {
+    showAusgabeError("Speichern fehlgeschlagen: " + e.message);
+  }
+  renderAusgabe();
+  renderAktionenVerwaltung();
+  renderBestellungsuebersicht();
+  renderMeineBestellung();
+}
+
 // ---------- Tab "Einstellungen": Export ----------
 
 function groessenIndex(artikelById, artikelId, groesse) {
@@ -1132,30 +1421,88 @@ function exportZeilen(aktion) {
     groessenIndex(artikelById, a.artikelId, a.groesse) - groessenIndex(artikelById, b.artikelId, b.groesse));
 }
 
-// Die im Export-Panel gewählten Aktionen, jeweils mit ihren summierten Zeilen.
+// Zeilen der Verteilliste: eine je bestellter Position, mit Kuerzel statt Namen.
+// Sortiert nach Kuerzel, damit die Liste beim Ausgeben in der Reihenfolge der
+// beschrifteten Beutel durchlaeuft.
+//
+// Die Liste zeigt bewusst NUR das Kuerzel. Sie liegt beim Verteilen offen aus,
+// oft auch fuer Dritte sichtbar -- und wer den Beutel holt, weiss selbst, welches
+// Kuerzel seins ist. Wer den vollen Namen braucht, hat ihn in der
+// Bestellungsuebersicht und in der Ausgabeliste in der App.
+function personenZeilen(aktion) {
+  const artikelById = Object.fromEntries(aktion.artikel.map((a) => [a.id, a]));
+  const initialen = initialenMap(aktion);
+  const zeilen = [];
+  for (const [schluessel, b] of Object.entries(aktion.bestellungen)) {
+    for (const pos of ((b && b.positionen) || [])) {
+      if (!pos || !pos.artikelId || !pos.menge) continue;
+      const artikel = artikelById[pos.artikelId];
+      const eintrag = ausgabeVon(aktion, schluessel)[pos.artikelId];
+      zeilen.push({
+        kuerzel: initialen[schluessel] || "?",
+        artikelId: pos.artikelId,
+        artikelName: artikel ? artikel.name : `(gelöscht: ${pos.artikelId})`,
+        groesse: pos.groesse,
+        menge: Number(pos.menge),
+        ausgegeben: eintrag ? "ausgegeben " + new Date(eintrag.am).toLocaleDateString("de-DE") : "[  ]"
+      });
+    }
+  }
+  return zeilen.sort((a, b) =>
+    a.kuerzel.localeCompare(b.kuerzel, "de") ||
+    a.artikelName.localeCompare(b.artikelName, "de") ||
+    groessenIndex(artikelById, a.artikelId, a.groesse) - groessenIndex(artikelById, b.artikelId, b.groesse));
+}
+
+// Spalten je Export-Inhalt. "artikel" geht an den Lieferanten (Summen), "person"
+// ist die Verteilliste zum Abhaken.
+const EXPORT_FELDER = {
+  artikel: [
+    { label: "Artikel", key: "artikelName", num: false },
+    { label: "Größe", key: "groesse", num: false },
+    { label: "Menge", key: "summe", num: true }
+  ],
+  person: [
+    { label: "Kürzel", key: "kuerzel", num: false },
+    { label: "Artikel", key: "artikelName", num: false },
+    { label: "Größe", key: "groesse", num: false },
+    { label: "Menge", key: "menge", num: true },
+    { label: "Ausgegeben", key: "ausgegeben", num: false }
+  ]
+};
+
+function exportIstPerson() { return exportInhalt === "person"; }
+
+// Die im Export-Panel gewählten Aktionen, jeweils mit ihren Zeilen.
 function exportBloecke() {
   const gewaehlt = exportAktionId
     ? appData.aktionen.filter((a) => a.id === exportAktionId)
     : appData.aktionen;
   return gewaehlt
-    .map((aktion) => ({ aktion, zeilen: exportZeilen(aktion) }))
+    .map((aktion) => ({ aktion, zeilen: exportIstPerson() ? personenZeilen(aktion) : exportZeilen(aktion) }))
     .filter((b) => b.zeilen.length);
 }
 
 function exportDateiname(endung) {
   const aktion = exportAktionId ? findAktion(exportAktionId) : null;
   const teil = aktion ? "_" + slugify(aktion.name, []) : "";
-  return `kleiderbestellung${teil}_${localDateIso()}.${endung}`;
+  const art = exportIstPerson() ? "_verteilliste" : "";
+  return `kleiderbestellung${art}${teil}_${localDateIso()}.${endung}`;
+}
+
+// Der Kopf sagt, welche der beiden Listen man in der Hand haelt -- ausgedruckt
+// sehen sie sich sonst zum Verwechseln aehnlich.
+function exportTitel() {
+  return exportIstPerson()
+    ? "Verteilliste je Person, mit Kürzel"
+    : "Zusammenfassung nach Artikel und Größe";
 }
 
 function exportText() {
   const bloecke = exportBloecke();
   if (!bloecke.length) { alert("Es liegen noch keine Bestellungen vor."); return; }
-  const fields = [
-    { label: "Artikel", key: "artikelName", num: false },
-    { label: "Größe", key: "groesse", num: false },
-    { label: "Menge", key: "summe", num: true }
-  ];
+  const mengeKey = exportIstPerson() ? "menge" : "summe";
+  const fields = EXPORT_FELDER[exportIstPerson() ? "person" : "artikel"];
   const alleZeilen = bloecke.flatMap((b) => b.zeilen);
   const widths = fields.map((f) => Math.max(f.label.length, ...alleZeilen.map((z) => String(z[f.key]).length)));
   const line = (cells) => cells.map((c, i) => {
@@ -1164,11 +1511,11 @@ function exportText() {
   }).join("  ");
   const sepLine = widths.map((w) => "-".repeat(w)).join("  ");
 
-  let out = `Kleiderbestellung — Zusammenfassung\n`;
+  let out = `Kleiderbestellung — ${exportTitel()}\n`;
   out += `Erstellt am ${new Date().toLocaleString("de-DE")}\n`;
   for (const { aktion, zeilen } of bloecke) {
-    const gesamt = zeilen.reduce((a, z) => a + z.summe, 0);
-    out += `\n${aktion.name}${aktion.offen === false ? " (geschlossen)" : ""}\n`;
+    const gesamt = zeilen.reduce((a, z) => a + z[mengeKey], 0);
+    out += `\n${aktion.name} (${aktionStatus(aktion).label})\n`;
     out += line(fields.map((f) => f.label)) + "\n" + sepLine + "\n";
     out += zeilen.map((z) => line(fields.map((f) => z[f.key]))).join("\n") + "\n";
     out += sepLine + "\n" + `Gesamt: ${gesamt} Stück\n`;
@@ -1179,13 +1526,18 @@ function exportText() {
 function exportPdf() {
   const bloecke = exportBloecke();
   if (!bloecke.length) { alert("Es liegen noch keine Bestellungen vor."); return; }
-  const theadHtml = `<tr><th>Artikel</th><th>Größe</th><th class="num">Menge</th></tr>`;
+  const fields = EXPORT_FELDER[exportIstPerson() ? "person" : "artikel"];
+  const mengeKey = exportIstPerson() ? "menge" : "summe";
+  const theadHtml = `<tr>${fields.map((f) => `<th${f.num ? ' class="num"' : ""}>${escapeHtml(f.label)}</th>`).join("")}</tr>`;
   const abschnitte = bloecke.map(({ aktion, zeilen }) => {
-    const rowsHtml = zeilen.map((z) => `<tr><td>${escapeHtml(z.artikelName)}</td><td>${escapeHtml(z.groesse)}</td><td class="num">${escapeHtml(z.summe)}</td></tr>`).join("");
-    const gesamt = zeilen.reduce((a, z) => a + z.summe, 0);
-    const totalRow = `<tr class="total-row"><td>Gesamt</td><td></td><td class="num">${escapeHtml(gesamt)}</td></tr>`;
+    const rowsHtml = zeilen.map((z) =>
+      `<tr>${fields.map((f) => `<td${f.num ? ' class="num"' : ""}>${escapeHtml(z[f.key])}</td>`).join("")}</tr>`).join("");
+    const gesamt = zeilen.reduce((a, z) => a + z[mengeKey], 0);
+    const totalCells = fields.map((f) =>
+      f.key === mengeKey ? `<td class="num">${escapeHtml(gesamt)}</td>` : `<td>${f === fields[0] ? "Gesamt" : ""}</td>`).join("");
+    const totalRow = `<tr class="total-row">${totalCells}</tr>`;
     return `
-      <h2 class="print-aktion">${escapeHtml(aktion.name)}${aktion.offen === false ? " (geschlossen)" : ""}</h2>
+      <h2 class="print-aktion">${escapeHtml(aktion.name)} (${escapeHtml(aktionStatus(aktion).label)})</h2>
       <table class="print-table">
         <thead>${theadHtml}</thead>
         <tbody>${rowsHtml}${totalRow}</tbody>
@@ -1193,7 +1545,7 @@ function exportPdf() {
   }).join("");
   document.getElementById("print-content").innerHTML = `
     <h1>👕 Kleiderbestellung</h1>
-    <p class="print-meta">Zusammenfassung nach Bestellaktion, Artikel und Größe — erstellt am ${new Date().toLocaleString("de-DE")}</p>
+    <p class="print-meta">${escapeHtml(exportTitel())} — erstellt am ${new Date().toLocaleString("de-DE")}</p>
     ${abschnitte}`;
   document.body.classList.add("printing-report");
   const cleanup = () => { document.body.classList.remove("printing-report"); window.removeEventListener("afterprint", cleanup); };
@@ -1202,6 +1554,7 @@ function exportPdf() {
 }
 
 function renderExportAuswahl() {
+  document.getElementById("export-inhalt").value = exportInhalt;
   const sel = document.getElementById("export-aktion");
   if (!appData.aktionen.some((a) => a.id === exportAktionId)) exportAktionId = "";
   sel.innerHTML = `<option value="">Alle Bestellaktionen</option>` +
@@ -1212,6 +1565,7 @@ function renderEinstellungen() {
   renderAktionenVerwaltung();
   renderKatalogVerwaltung();
   renderBestellungsuebersicht();
+  renderAusgabe();
   renderExportAuswahl();
 }
 
@@ -1247,6 +1601,7 @@ async function init() {
   document.getElementById("btn-export-text").addEventListener("click", exportText);
   document.getElementById("btn-export-pdf").addEventListener("click", exportPdf);
   document.getElementById("export-aktion").addEventListener("change", (e) => { exportAktionId = e.target.value; });
+  document.getElementById("export-inhalt").addEventListener("change", (e) => { exportInhalt = e.target.value; });
 
   // Der Delegate hängt am Wrapper, nicht mehr an .aktion-row: das Link-Panel
   // steht UNTER der Zeile und wäre von einem .aktion-row-closest nicht erfasst.
@@ -1273,6 +1628,8 @@ async function init() {
       externTokenWiderrufen(aktionId);
     } else if (e.target.closest(".btn-toggle-aktion")) {
       toggleAktion(aktionId);
+    } else if (e.target.closest(".btn-abschluss-aktion")) {
+      abschlussUmschalten(aktionId);
     } else if (e.target.closest(".btn-delete-aktion")) {
       deleteAktion(aktionId);
     }
@@ -1294,6 +1651,29 @@ async function init() {
     } else if (e.target.closest(".btn-delete-artikel")) {
       deleteArtikel(aktionId, artikelId);
     }
+  });
+
+  // Der Haken speichert sofort. Waehrend des Speicherns ist er gesperrt, damit ein
+  // zweiter Klick nicht auf einem noch nicht geschriebenen Stand aufsetzt.
+  document.getElementById("ausgabe-rows").addEventListener("change", async (e) => {
+    const haken = e.target.closest(".ausgabe-haken");
+    if (!haken) return;
+    const person = haken.closest(".ausgabe-person");
+    if (!person) return;
+    haken.disabled = true;
+    await setzeAusgabe(person.dataset.aktionId, person.dataset.schluessel, [haken.dataset.artikelId], haken.checked);
+  });
+
+  document.getElementById("ausgabe-rows").addEventListener("click", (e) => {
+    const alle = e.target.closest(".btn-ausgabe-alle");
+    if (!alle) return;
+    const person = alle.closest(".ausgabe-person");
+    if (!person) return;
+    const ids = Array.from(person.querySelectorAll(".ausgabe-haken")).map((h) => h.dataset.artikelId);
+    const an = alle.dataset.an === "1";
+    if (!an && !confirm("Die komplette Ausgabe dieser Person zurücknehmen?")) return;
+    alle.disabled = true;
+    setzeAusgabe(person.dataset.aktionId, person.dataset.schluessel, ids, an);
   });
 
   document.getElementById("uebersicht-rows").addEventListener("click", (e) => {
