@@ -65,7 +65,7 @@ const APP_FUNKTIONEN = [
     items: [
       "Sobald eine Bestellaktion abgeschlossen ist, steht in den Einstellungen eine Ausgabeliste: je Person jedes bestellte Teil einzeln zum Abhaken.",
       "Jeder Haken merkt sich Datum und Uhrzeit und wird sofort gespeichert. „Alles ausgeben“ hakt eine ganze Person auf einmal ab, „Ausgabe zurücknehmen“ macht das wieder rückgängig.",
-      "Jede Person trägt ein Kürzel aus ihren Initialen — zum Beschriften des Beutels. Haben zwei dasselbe Kürzel, wird der Nachname so weit ausgeschrieben, bis die Kürzel eindeutig sind.",
+      "Jede Person trägt ein Kürzel aus zwei Buchstaben — dem ersten vom Vornamen und dem ersten vom Nachnamen, ohne Punkte. Damit wird der Beutel beschriftet.",
       "Wer bestellt hat, sieht am eigenen Formular, welche Teile schon ausgegeben sind.",
       "Der Kopf jeder Aktion zeigt, wie viele Teile insgesamt schon heraus sind."
     ]
@@ -124,7 +124,7 @@ const APP_CHANGELOG = [
         items: [
           "Eine geschlossene Bestellaktion lässt sich jetzt abschließen — das heißt: die Bestellung ist beim Lieferanten aufgegeben. Der Knopf steht neben „Schließen“ und ist erst nach dem Schließen da.",
           "Mit dem Abschluss erscheint in den Einstellungen die neue Karte „Ausgabe“: je Person jedes bestellte Teil einzeln zum Abhaken, mit Datum und Uhrzeit. „Alles ausgeben“ hakt eine ganze Person auf einmal ab.",
-          "Jede Person trägt dort ein eindeutiges Kürzel aus ihren Initialen, zum Beschriften des Beutels. Zwei gleiche Kürzel werden automatisch unterschieden.",
+          "Jede Person trägt dort ein Kürzel aus zwei Buchstaben: dem ersten vom Vornamen und dem ersten vom Nachnamen, ohne Punkte — so wie der Beutel beschriftet wird.",
           "Neu im Export: die Verteilliste. Eine Zeile je Person und Teil, mit Kürzel statt Namen und einem Kästchen zum Abhaken — zum Ausdrucken für die Ausgabe. Die bisherige Liste für den Lieferanten bleibt unverändert und ist weiterhin die Vorauswahl.",
           "Wer bestellt hat, sieht am eigenen Formular, welche Teile schon ausgegeben sind.",
           "Ein Abschluss lässt sich zurücknehmen; die bereits abgehakte Ausgabe bleibt dabei erhalten. Wieder öffnen geht erst danach."

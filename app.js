@@ -161,55 +161,32 @@ function aktionStatus(aktion) {
 
 // ---------- Kuerzel (Initialen) ----------
 //
-// Auf der Verteilliste steht nur "M.B." statt des vollen Namens: die Liste liegt
-// beim Ausgeben offen auf dem Tisch, und der Beutel traegt dasselbe Kuerzel.
+// Auf der Verteilliste steht nur das Kuerzel statt des vollen Namens: die Liste
+// liegt beim Ausgeben offen auf dem Tisch, und der Beutel traegt dasselbe Kuerzel.
 //
-// Zwei Leute mit denselben Initialen waeren auf genau dieser Liste nicht mehr
-// auseinanderzuhalten -- und Auseinanderhalten ist ihr einziger Zweck. Deshalb
-// wird der Nachname buchstabenweise verlaengert (M.B. -> M.Br. / M.Bu.), bis die
-// Kuerzel innerhalb der Aktion eindeutig sind. Bleiben zwei gleich (wirklich
-// gleicher Name), haengt eine laufende Nummer dran.
+// Genau zwei Buchstaben: erster vom Vornamen, erster vom Nachnamen, ohne Punkt
+// und ohne Trennzeichen ("Frank Wagner" -> "FW"). Michel-Vorgabe vom 2026-09-09,
+// ausdruecklich gegen die vorherige Fassung, die bei gleichen Initialen den
+// Nachnamen verlaengerte (J.Ha. / J.Hue.).
+//
+// ⚠️ Damit sind gleiche Kuerzel moeglich und gewollt: zwei Leute mit "JH" stehen
+// auf der Liste beide als "JH". Die Zuordnung leistet dann nur noch die Reihenfolge
+// (personenZeilen sortiert die Zeilen einer Person zusammen) und die Ausgabeliste
+// in der App, die den vollen Namen zeigt. Nicht "reparieren" -- das war die Ansage.
 
-function kuerzel(vorname, nachname, laenge) {
+function kuerzel(vorname, nachname) {
   const v = String(vorname || "").trim();
   const n = String(nachname || "").trim();
-  const teil = n.slice(0, Math.max(1, laenge));
-  const vk = v ? v.charAt(0).toUpperCase() + "." : "";
-  const nk = teil ? teil.charAt(0).toUpperCase() + teil.slice(1) + "." : "";
-  return (vk + nk) || "?";
+  const k = (v ? v.charAt(0) : "") + (n ? n.charAt(0) : "");
+  return k.toUpperCase() || "?";
 }
 
-// schluessel -> eindeutiges Kuerzel, eindeutig innerhalb EINER Bestellaktion.
+// schluessel -> Kuerzel, fuer alle Bestellungen einer Aktion.
 function initialenMap(aktion) {
-  const leute = Object.entries(aktion.bestellungen).map(([schluessel, b]) => ({
-    schluessel,
-    vorname: (b && b.vorname) || "",
-    nachname: (b && b.nachname) || ""
-  }));
-  const maxLaenge = leute.reduce((m, p) => Math.max(m, p.nachname.length), 1);
   const map = {};
-  let offen = leute;
-  for (let laenge = 1; laenge <= maxLaenge && offen.length; laenge++) {
-    const proKuerzel = new Map();
-    for (const p of offen) {
-      const k = kuerzel(p.vorname, p.nachname, laenge);
-      if (!proKuerzel.has(k)) proKuerzel.set(k, []);
-      proKuerzel.get(k).push(p);
-    }
-    const rest = [];
-    for (const gruppe of proKuerzel.values()) {
-      if (gruppe.length === 1) map[gruppe[0].schluessel] = kuerzel(gruppe[0].vorname, gruppe[0].nachname, laenge);
-      else rest.push(...gruppe);
-    }
-    offen = rest;
+  for (const [schluessel, b] of Object.entries(aktion.bestellungen)) {
+    map[schluessel] = kuerzel(b && b.vorname, b && b.nachname);
   }
-  // Rest: wirklich gleicher Name (oder gar keiner) -- durchnummerieren, damit die
-  // Zeilen auf der Ausgabeliste trotzdem unterscheidbar bleiben. Sortiert nach
-  // Schluessel, damit dieselbe Person zwischen zwei Exporten dieselbe Nummer behaelt.
-  offen.sort((a, b) => a.schluessel.localeCompare(b.schluessel, "de"));
-  offen.forEach((p, i) => {
-    map[p.schluessel] = kuerzel(p.vorname, p.nachname, maxLaenge) + " (" + (i + 1) + ")";
-  });
   return map;
 }
 
@@ -1312,7 +1289,8 @@ function renderAusgabe() {
     const leute = Object.entries(aktion.bestellungen)
       .map(([schluessel, b]) => Object.assign({ schluessel }, b))
       .filter((b) => (b.positionen || []).some((pos) => pos && pos.artikelId))
-      .sort((a, b) => (initialen[a.schluessel] || "").localeCompare(initialen[b.schluessel] || "", "de"));
+      .sort((a, b) => (initialen[a.schluessel] || "").localeCompare(initialen[b.schluessel] || "", "de")
+        || a.schluessel.localeCompare(b.schluessel, "de"));
     const summe = leute.reduce((acc, r) => {
       const st = ausgabeStand(aktion, r.schluessel);
       return { ausgegeben: acc.ausgegeben + st.ausgegeben, gesamt: acc.gesamt + st.gesamt };
@@ -1342,7 +1320,7 @@ function renderAusgabe() {
           return `
         <div class="ausgabe-person${alleDa ? " fertig" : ""}" data-aktion-id="${escapeHtml(aktion.id)}" data-schluessel="${escapeHtml(r.schluessel)}">
           <div class="ausgabe-person-kopf">
-            <span class="ausgabe-kuerzel" title="Kürzel für den Beutel — auf dieser Liste eindeutig">${escapeHtml(initialen[r.schluessel] || "?")}</span>
+            <span class="ausgabe-kuerzel" title="Kürzel für den Beutel: erster Buchstabe vom Vor- und vom Nachnamen">${escapeHtml(initialen[r.schluessel] || "?")}</span>
             <span class="confirm-name">${escapeHtml(name)}${jahrgang}</span>
             <span class="muted ausgabe-person-stand">${st.ausgegeben} von ${st.gesamt}</span>
             <button type="button" class="btn secondary small btn-ausgabe-alle" data-an="${alleDa ? "0" : "1"}">${alleDa ? "Ausgabe zurücknehmen" : "Alles ausgeben"}</button>
@@ -1440,6 +1418,10 @@ function personenZeilen(aktion) {
       const eintrag = ausgabeVon(aktion, schluessel)[pos.artikelId];
       zeilen.push({
         kuerzel: initialen[schluessel] || "?",
+        // Nur zum Sortieren, steht in keiner Spalte: haelt die Zeilen EINER Person
+        // zusammen, auch wenn sich zwei Leute dasselbe Kuerzel teilen. Ohne das
+        // stuenden bei zwei "JH" abwechselnd Zeilen von beiden untereinander.
+        schluessel,
         artikelId: pos.artikelId,
         artikelName: artikel ? artikel.name : `(gelöscht: ${pos.artikelId})`,
         groesse: pos.groesse,
@@ -1450,6 +1432,7 @@ function personenZeilen(aktion) {
   }
   return zeilen.sort((a, b) =>
     a.kuerzel.localeCompare(b.kuerzel, "de") ||
+    a.schluessel.localeCompare(b.schluessel, "de") ||
     a.artikelName.localeCompare(b.artikelName, "de") ||
     groessenIndex(artikelById, a.artikelId, a.groesse) - groessenIndex(artikelById, b.artikelId, b.groesse));
 }

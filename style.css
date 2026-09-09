@@ -516,7 +516,9 @@ nav .nav-right { margin-left: auto; display: flex; flex-wrap: wrap; gap: inherit
 }
 /* Das Kuerzel ist die Verbindung zum beschrifteten Beutel und muss auch beim
    Ueberfliegen sofort ins Auge fallen -- deshalb Schreibmaschinenschrift mit
-   fester Mindestbreite, damit die Kuerzel untereinander buendig stehen. */
+   fester Mindestbreite, damit die Kuerzel untereinander buendig stehen.
+   Zwei Buchstaben, aber die Breite steht fest: bei fehlendem Vor- oder Nachnamen
+   bleibt einer uebrig, und die Spalte darf davon nicht verrutschen. */
 .ausgabe-kuerzel {
   font-family: "Consolas", "SFMono-Regular", ui-monospace, monospace;
   font-weight: 700;
@@ -525,7 +527,7 @@ nav .nav-right { margin-left: auto; display: flex; flex-wrap: wrap; gap: inherit
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 3px 8px;
-  min-width: 62px;
+  min-width: 44px;
   text-align: center;
   white-space: nowrap;
 }

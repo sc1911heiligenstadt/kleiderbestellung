@@ -42,9 +42,11 @@ abgehakte Ausgabe bleibt dabei erhalten. Jede Aktion hat ihr eigenes Bestellfens
 eine kann beim Lieferanten und damit geschlossen sein, während eine andere noch
 läuft. Geschlossene Aktionen sehen nur noch die, die dort bestellt haben.
 
-Auf der Verteilliste steht statt des Namens ein **Kürzel** aus den Initialen
-(„M.B."), passend zum beschrifteten Beutel. Haben zwei Personen dasselbe Kürzel,
-wird der Nachname so weit ausgeschrieben, bis die Kürzel eindeutig sind.
+Auf der Verteilliste steht statt des Namens ein **Kürzel** aus zwei Buchstaben:
+dem ersten vom Vornamen und dem ersten vom Nachnamen, ohne Punkte („Frank Wagner"
+→ `FW`). So wird auch der Beutel beschriftet. Teilen sich zwei Personen dasselbe
+Kürzel, stehen ihre Zeilen trotzdem jeweils am Stück untereinander; den vollen
+Namen zeigt die Ausgabeliste in der App.
 
 Die Menge gibt in der Regel der Verein über den Katalog vor. Steht dort die
 Standardmenge 0, trägt der Besteller sie selbst ein.

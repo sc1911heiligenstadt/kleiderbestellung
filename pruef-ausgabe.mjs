@@ -52,7 +52,13 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync("app.js", "utf8"), sandbox, { filename: "app.js" });
+// Die echte Datei, unveraendert -- nur eine Zeile angehaengt, die die per const
+// deklarierten Werte sichtbar macht. const landet nicht auf globalThis, sonst
+// kaeme man an EXPORT_FELDER nicht heran, ohne die Spalten hier nachzubauen.
+vm.runInContext(
+  fs.readFileSync("app.js", "utf8") + `
+globalThis.__konstanten = { EXPORT_FELDER };`,
+  sandbox, { filename: "app.js" });
 
 const F = (name) => {
   const f = sandbox[name];
@@ -145,38 +151,32 @@ console.log("\n2. Zustaende");
 
 console.log("\n3. Kuerzel");
 {
-  gleich("einfaches Kuerzel", kuerzel("Michel", "Brunner", 1), "M.B.");
-  gleich("Nachname auf zwei Buchstaben", kuerzel("Michel", "Brunner", 2), "M.Br.");
-  gleich("kleingeschrieben wird gross", kuerzel("michel", "brunner", 1), "M.B.");
-  gleich("Umlaut bleibt Umlaut", kuerzel("Örs", "Übel", 1), "Ö.Ü.");
-  gleich("ohne Nachname", kuerzel("Michel", "", 1), "M.");
-  gleich("ohne Namen", kuerzel("", "", 1), "?");
-  gleich("Laenge 0 wird auf 1 gehoben", kuerzel("Michel", "Brunner", 0), "M.B.");
+  // Michel-Vorgabe 2026-09-09: GENAU zwei Buchstaben, ohne Punkt, ohne Trenner.
+  gleich("zwei Buchstaben, keine Punkte", kuerzel("Frank", "Wagner"), "FW");
+  gleich("kleingeschrieben wird gross", kuerzel("michel", "brunner"), "MB");
+  gleich("Umlaut bleibt Umlaut", kuerzel("Örs", "Übel"), "ÖÜ");
+  gleich("Doppelname zaehlt nur den ersten Buchstaben", kuerzel("Jan-Peter", "von Haaren"), "JV");
+  gleich("Leerzeichen am Rand faellt weg", kuerzel("  Frank ", " Wagner "), "FW");
+  gleich("ohne Nachname", kuerzel("Michel", ""), "M");
+  gleich("ohne Vornamen", kuerzel("", "Wagner"), "W");
+  gleich("ohne Namen", kuerzel("", ""), "?");
+  zusage("nie ein Punkt im Kuerzel", !kuerzel("Frank", "Wagner").includes("."), "");
 
-  // Der eigentliche Punkt: Kollisionen. Brunner und Brandt teilen sich M.B.
   const m = initialenMap(bau());
-  // Brunner und Brandt teilen sich auch noch "M.Br." -- erst der DRITTE
-  // Buchstabe trennt sie. Beide bekommen deshalb drei.
-  gleich("Michel Brunner wird verlaengert", m["michel.brunner"], "M.Bru.");
-  gleich("Maria Brandt wird verlaengert", m["maria.brandt"], "M.Bra.");
-  gleich("Tim Klein bleibt kurz", m["extern:tim.klein.2011"], "T.K.");
-  zusage("alle Kuerzel eindeutig", new Set(Object.values(m)).size === Object.keys(m).length,
-    JSON.stringify(m));
+  gleich("Michel Brunner", m["michel.brunner"], "MB");
+  gleich("Maria Brandt", m["maria.brandt"], "MB");
+  gleich("Tim Klein", m["extern:tim.klein.2011"], "TK");
 }
 {
-  // Wirklich gleicher Name: dann muss die laufende Nummer greifen, sonst
-  // stuenden auf der Verteilliste zwei nicht unterscheidbare Zeilen.
+  // ⚠️ Gleiche Kuerzel sind jetzt AUSDRUECKLICH erlaubt (Michel-Vorgabe). Der Test
+  // haelt das fest, damit ein spaeterer Lauf es nicht als Bug "repariert".
   const a = normalizeAktion({ id: "a", name: "A", artikel: [], bestellungen: {
-    "tom.mueller": { vorname: "Tom", nachname: "Müller", positionen: [] },
-    "tom.mueller2": { vorname: "Tom", nachname: "Müller", positionen: [] }
+    "jan.hartmann": { vorname: "Jan", nachname: "Hartmann", positionen: [] },
+    "jan.huebner": { vorname: "Jan", nachname: "Hübner", positionen: [] }
   } }, 0);
   const m = initialenMap(a);
-  zusage("gleicher Name: trotzdem eindeutig", m["tom.mueller"] !== m["tom.mueller2"],
-    JSON.stringify(m));
-  zusage("gleicher Name: laufende Nummer",
-    /\(1\)$/.test(m["tom.mueller"]) && /\(2\)$/.test(m["tom.mueller2"]), JSON.stringify(m));
-  // Zweiter Aufruf muss dasselbe liefern -- sonst wechselte das Kuerzel auf dem
-  // Beutel zwischen zwei Ausdrucken.
+  gleich("Hartmann bleibt JH", m["jan.hartmann"], "JH");
+  gleich("Huebner bleibt ebenfalls JH", m["jan.huebner"], "JH");
   gleich("Kuerzel sind stabil", initialenMap(a), m);
 }
 {
@@ -223,16 +223,32 @@ console.log("\n5. Verteilliste");
 
   gleich("eine Zeile je bestellter Position", z.length, 4);
   zusage("jede Zeile traegt ein Kuerzel", z.every((r) => r.kuerzel && r.kuerzel !== ""), "");
-  zusage("kein Vor- oder Nachname in der Liste",
-    !JSON.stringify(z).includes("Brunner") && !JSON.stringify(z).includes("Michel")
-    && !JSON.stringify(z).includes("Klein"),
-    JSON.stringify(z));
+  // Geprueft wird, was WIRKLICH in den Spalten landet -- r.schluessel steht nur
+  // zum Sortieren im Objekt und kommt in keiner Spalte vor.
+  const spalten = sandbox.__konstanten.EXPORT_FELDER.person.map((f) => f.key);
+  const sichtbar = JSON.stringify(z.map((r) => Object.fromEntries(spalten.map((k) => [k, r[k]]))));
+  zusage("kein Vor- oder Nachname in den Spalten",
+    !/Brunner|Michel|Klein|Brandt|Maria/i.test(sichtbar), sichtbar);
+  gleich("Spalte Kuerzel ist dabei", spalten.includes("kuerzel"), true);
 
-  const hoodieMichel = z.find((r) => r.kuerzel === "M.Bru." && r.artikelId === "hoodie");
+  const hoodieMichel = z.find((r) => r.artikelId === "hoodie" && r.groesse === "L");
+  gleich("Kuerzel im Export ist zweistellig", hoodieMichel && hoodieMichel.kuerzel, "MB");
   zusage("ausgegebene Zeile traegt ein Datum",
     !!hoodieMichel && hoodieMichel.ausgegeben.startsWith("ausgegeben "), JSON.stringify(hoodieMichel));
-  const poloMichel = z.find((r) => r.kuerzel === "M.Bru." && r.artikelId === "polo");
+  const poloMichel = z.find((r) => r.artikelId === "polo");
   gleich("offene Zeile traegt ein Kaestchen", poloMichel && poloMichel.ausgegeben, "[  ]");
+
+  // Zwei Leute mit demselben Kuerzel: ihre Zeilen duerfen sich nicht mischen,
+  // sonst ist auf der ausgedruckten Liste kein Beutel mehr zuzuordnen.
+  const d = bau({ offen: false, abgeschlossen: true });
+  d.bestellungen["michel.brandt"] = { vorname: "Michel", nachname: "Brandt", positionen: [
+    { artikelId: "hoodie", groesse: "M", menge: 1 }, { artikelId: "polo", groesse: "L", menge: 1 }
+  ] };
+  const zd = personenZeilen(d);
+  const mb = zd.filter((r) => r.kuerzel === "MB").map((r) => r.schluessel);
+  gleich("drei Leute teilen sich MB", new Set(mb).size, 3);
+  zusage("Zeilen einer Person stehen am Stueck",
+    mb.every((k, i) => i === 0 || k === mb[i - 1] || !mb.slice(0, i).includes(k)), JSON.stringify(mb));
 
   const stutzen = z.find((r) => r.artikelId === "socken");
   gleich("freie Menge kommt mit", stutzen && stutzen.menge, 3);
