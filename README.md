@@ -30,7 +30,8 @@ zwei gleichnamige Spieler.
    Spieler und Eltern ohne Konto bekommen dafür einen eigenen Link mit QR-Code.
 3. Ist das Bestellfenster **geschlossen**, steht die **Bestellungsübersicht**, und der
    **Export** liefert die Liste für den Lieferanten — nach Artikel und Größe
-   gruppiert, als Text oder PDF.
+   gruppiert, als Text, als PDF oder als Excel-Mappe (je Bestellaktion ein
+   Tabellenblatt).
 4. Ist die Bestellung beim Lieferanten aufgegeben, wird die Aktion **abgeschlossen**.
    Damit erscheint die **Ausgabe**: je Person jedes bestellte Teil einzeln zum
    Abhaken, mit Datum. Dazu passt die zweite Exportart, die **Verteilliste** —

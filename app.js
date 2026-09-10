@@ -1536,6 +1536,264 @@ function exportPdf() {
   setTimeout(() => window.print(), 150);
 }
 
+// ---------- Export als Excel-Mappe (.xlsx) ----------
+//
+// JSZip (28 KB) haengt bewusst NICHT im <head>: gebraucht wird es nur beim
+// Excel-Export, und den sieht ohnehin nur, wer administrieren darf. Erster
+// Bedarf laedt nach, jeder weitere Aufruf bekommt dieselbe Promise. Bauform wie
+// _ladeBibliothek in E:\Trainerdaten\pdf-utils.js.
+//
+// GOTCHA: Bei onerror muss der Eintrag wieder raus -- sonst haengt jeder
+// weitere Versuch nach einem Netzaussetzer dauerhaft an der abgelehnten
+// Promise, und der Knopf bliebe bis zum Neuladen der Seite tot.
+const _bibliotheken = {};
+const JSZIP_URL = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
+
+function ladeJsZip() {
+  if (typeof window.JSZip !== "undefined") return Promise.resolve();
+  if (_bibliotheken[JSZIP_URL]) return _bibliotheken[JSZIP_URL];
+  _bibliotheken[JSZIP_URL] = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = JSZIP_URL;
+    s.onload = () => {
+      if (typeof window.JSZip === "undefined") {
+        delete _bibliotheken[JSZIP_URL];
+        reject(new Error("Die ZIP-Bibliothek wurde geladen, ist aber nicht nutzbar — bitte die Seite neu laden."));
+        return;
+      }
+      resolve();
+    };
+    s.onerror = () => {
+      delete _bibliotheken[JSZIP_URL];
+      reject(new Error("Die ZIP-Bibliothek konnte nicht geladen werden — dafür ist eine Internetverbindung nötig."));
+    };
+    document.head.appendChild(s);
+  });
+  return _bibliotheken[JSZIP_URL];
+}
+
+const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+// 0 -> A, 25 -> Z, 26 -> AA.
+function _xlsxSpaltenName(index) {
+  let n = index;
+  let name = "";
+  do {
+    name = String.fromCharCode(65 + (n % 26)) + name;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return name;
+}
+
+// XML kennt keine Steuerzeichen -- ein einziges davon macht die GANZE Mappe
+// unlesbar, Excel bietet dann nur noch "Reparieren" an. Tabulator und
+// Zeilenumbruch sind erlaubt und bleiben stehen.
+function _xlsxText(roh) {
+  return String(roh == null ? "" : roh).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+}
+
+// Eigener Escaper statt escapeHtml(): das arbeitet mit String(s || "") und
+// machte aus der Zahl 0 einen leeren Text -- in einer Mengenspalte genau der
+// Wert, der nicht verschwinden darf.
+function _xmlEsc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+// Blattnamen sind in Excel enger geregelt als Aktionsnamen in dieser App:
+// hoechstens 31 Zeichen, kein : \ / ? * [ ], nicht leer, kein Apostroph am
+// Rand -- und je Mappe eindeutig, ohne Ruecksicht auf Gross/Klein. Ein Verstoss
+// ist keine Kleinigkeit: Excel oeffnet die Mappe dann gar nicht erst.
+function xlsxBlattname(name, vergeben) {
+  let basis = _xlsxText(name).replace(/[:\\\/\?\*\[\]]/g, " ").replace(/\s+/g, " ").trim();
+  basis = basis.slice(0, 31).replace(/^'+/, "").replace(/'+$/, "").trim();
+  if (!basis) basis = "Bestellaktion";
+  let gewaehlt = basis;
+  let n = 2;
+  while (vergeben.has(gewaehlt.toLowerCase())) {
+    const zusatz = " (" + n++ + ")";
+    gewaehlt = basis.slice(0, 31 - zusatz.length).trim() + zusatz;
+  }
+  vergeben.add(gewaehlt.toLowerCase());
+  return gewaehlt;
+}
+
+// Baut alle XML-Teile der Mappe: je Bestellaktion ein Blatt mit Kopfzeile,
+// Datenzeilen und Gesamtzeile -- dieselbe Gliederung wie im Text- und
+// PDF-Export, damit alle drei Ausgaben dasselbe sagen.
+//
+// Bewusst OHNE DOM und OHNE JSZip, damit pruef-xlsx.mjs genau diese Funktion
+// aufrufen kann statt einer nachgebauten Kopie. Vorbild: _buildVorlagenXlsx in
+// E:\Trainerdaten\app.js. Drei Dinge sieht man der Datei nicht an:
+//   - styles.xml braucht ZWEI <fill>-Eintraege (none + gray125), auch wenn
+//     keiner benutzt wird; mit nur einem meldet Excel eine beschaedigte Datei.
+//   - Jeder Teil muss in [Content_Types].xml UND in den .rels stehen.
+//   - Die Reihenfolge der Elemente in <worksheet> ist im Schema festgelegt
+//     (dimension, sheetViews, sheetFormatPr, cols, sheetData, autoFilter,
+//     pageMargins) -- vertauscht faellt es erst beim Oeffnen auf.
+function _xlsxTeile(bloecke, fields, mengeKey) {
+  const kopf = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+  const NS_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+
+  // sharedStrings: jeder Text steht einmal in der Tabelle, die Zellen zeigen
+  // nur per Index darauf -- so schreibt Excel selbst. count = alle Textzellen
+  // zusammen, uniqueCount = die Eintraege der Tabelle.
+  const texte = [];
+  const textIndex = new Map();
+  let textZellen = 0;
+  const textId = (text) => {
+    if (!textIndex.has(text)) { textIndex.set(text, texte.length); texte.push(text); }
+    return textIndex.get(text);
+  };
+
+  const vergebeneNamen = new Set();
+  const blaetter = bloecke.map(({ aktion, zeilen }, blattNr) => {
+    const blattName = xlsxBlattname(aktion.name, vergebeneNamen);
+    const gesamt = zeilen.reduce((a, z) => a + Number(z[mengeKey] || 0), 0);
+
+    // Die Menge bleibt eine echte Zahl. Als Text koennte in Excel niemand damit
+    // rechnen -- und genau dafuer holt man sich eine Tabelle.
+    const werteZeilen = [
+      fields.map((f) => f.label),
+      ...zeilen.map((z) => fields.map((f) => (f.key === mengeKey ? Number(z[f.key] || 0) : z[f.key]))),
+      fields.map((f, i) => (f.key === mengeKey ? gesamt : (i === 0 ? "Gesamt" : "")))
+    ];
+    const letzteZeile = werteZeilen.length;
+    const letzteSpalte = _xlsxSpaltenName(fields.length - 1);
+    const fett = new Set([1, letzteZeile]);   // Kopfzeile und Gesamtzeile
+
+    const zeilenXml = werteZeilen.map((werte, r) => {
+      const nr = r + 1;
+      const stil = fett.has(nr) ? ' s="1"' : "";
+      const zellen = werte.map((wert, c) => {
+        const ref = _xlsxSpaltenName(c) + nr;
+        if (typeof wert === "number") {
+          if (!Number.isFinite(wert)) return "";
+          return `<c r="${ref}"${stil}><v>${wert}</v></c>`;
+        }
+        const text = _xlsxText(wert);
+        if (!text) return "";   // leere Zellen laesst Excel selbst auch weg
+        textZellen++;
+        return `<c r="${ref}"${stil} t="s"><v>${textId(text)}</v></c>`;
+      }).filter(Boolean).join("");
+      return `<row r="${nr}" spans="1:${werte.length}">${zellen}</row>`;
+    }).join("");
+
+    // Spaltenbreite nach dem laengsten Wert, damit niemand erst jede Spalte
+    // aufziehen muss. Gedeckelt, sonst sprengt ein langer Artikelname das Blatt.
+    const colsXml = "<cols>" + fields.map((f, c) => {
+      const laengen = werteZeilen.map((w) => _xlsxText(w[c]).length);
+      const breite = Math.min(40, Math.max(10, ...laengen) + 2);
+      return `<col min="${c + 1}" max="${c + 1}" width="${breite}" customWidth="1"/>`;
+    }).join("") + "</cols>";
+
+    // Kopfzeile eingefroren: beim Scrollen durch eine lange Liste bleibt
+    // sichtbar, welche Spalte welche ist.
+    const sheetViews = `<sheetViews><sheetView${blattNr === 0 ? ' tabSelected="1"' : ""} workbookViewId="0">` +
+      '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' +
+      '<selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews>';
+
+    // Filter nur ueber Kopf und Daten -- die Gesamtzeile bleibt draussen,
+    // sonst filtert Excel sie mit weg.
+    const autoFilter = letzteZeile > 2 ? `<autoFilter ref="A1:${letzteSpalte}${letzteZeile - 1}"/>` : "";
+
+    const xml = kopf +
+      `<worksheet xmlns="${NS}" xmlns:r="${NS_REL}">` +
+      `<dimension ref="A1:${letzteSpalte}${letzteZeile}"/>` +
+      sheetViews +
+      '<sheetFormatPr baseColWidth="10" defaultRowHeight="15"/>' +
+      colsXml +
+      `<sheetData>${zeilenXml}</sheetData>` +
+      autoFilter +
+      '<pageMargins left="0.7" right="0.7" top="0.787" bottom="0.787" header="0.3" footer="0.3"/>' +
+      '</worksheet>';
+    return { blattName, xml };
+  });
+
+  const teile = {};
+
+  teile["[Content_Types].xml"] = kopf +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+    blaetter.map((_, i) =>
+      `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("") +
+    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+    '<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>' +
+    '</Types>';
+
+  teile["_rels/.rels"] = kopf +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    `<Relationship Id="rId1" Type="${NS_REL}/officeDocument" Target="xl/workbook.xml"/>` +
+    '</Relationships>';
+
+  teile["xl/workbook.xml"] = kopf +
+    `<workbook xmlns="${NS}" xmlns:r="${NS_REL}"><sheets>` +
+    blaetter.map((b, i) => `<sheet name="${_xmlEsc(b.blattName)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("") +
+    '</sheets></workbook>';
+
+  teile["xl/_rels/workbook.xml.rels"] = kopf +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    blaetter.map((_, i) =>
+      `<Relationship Id="rId${i + 1}" Type="${NS_REL}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("") +
+    `<Relationship Id="rId${blaetter.length + 1}" Type="${NS_REL}/styles" Target="styles.xml"/>` +
+    `<Relationship Id="rId${blaetter.length + 2}" Type="${NS_REL}/sharedStrings" Target="sharedStrings.xml"/>` +
+    '</Relationships>';
+
+  // Minimale Stiltabelle mit genau einem eigenen Format: fett (Kopf- und
+  // Gesamtzeile). Die zwei <fill>-Eintraege erwartet Excel unabhaengig davon,
+  // ob sie benutzt werden.
+  teile["xl/styles.xml"] = kopf +
+    `<styleSheet xmlns="${NS}">` +
+    '<fonts count="2">' +
+    '<font><sz val="11"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>' +
+    '<font><b/><sz val="11"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>' +
+    '</fonts>' +
+    '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>' +
+    '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+    '<cellXfs count="2">' +
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+    '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+    '</cellXfs>' +
+    '<cellStyles count="1"><cellStyle name="Standard" xfId="0" builtinId="0"/></cellStyles>' +
+    '</styleSheet>';
+
+  teile["xl/sharedStrings.xml"] = kopf +
+    `<sst xmlns="${NS}" count="${textZellen}" uniqueCount="${texte.length}">` +
+    texte.map((t) => `<si><t xml:space="preserve">${_xmlEsc(t)}</t></si>`).join("") +
+    '</sst>';
+
+  blaetter.forEach((b, i) => { teile[`xl/worksheets/sheet${i + 1}.xml`] = b.xml; });
+
+  return teile;
+}
+
+async function exportXlsx() {
+  const bloecke = exportBloecke();
+  if (!bloecke.length) { alert("Es liegen noch keine Bestellungen vor."); return; }
+  const btn = document.getElementById("btn-export-xlsx");
+  const beschriftung = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "Excel wird erzeugt …"; }
+  try {
+    await ladeJsZip();
+    const fields = EXPORT_FELDER[exportIstPerson() ? "person" : "artikel"];
+    const mengeKey = exportIstPerson() ? "menge" : "summe";
+    const teile = _xlsxTeile(bloecke, fields, mengeKey);
+    const zip = new JSZip();
+    Object.keys(teile).forEach((pfad) => zip.file(pfad, teile[pfad]));
+    const blob = await zip.generateAsync({ type: "blob", mimeType: XLSX_MIME, compression: "DEFLATE" });
+    download(exportDateiname("xlsx"), XLSX_MIME, blob);
+  } catch (e) {
+    alert("Die Excel-Datei konnte nicht erzeugt werden: " + ((e && e.message) || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = beschriftung; }
+  }
+}
+
 function renderExportAuswahl() {
   document.getElementById("export-inhalt").value = exportInhalt;
   const sel = document.getElementById("export-aktion");
@@ -1583,6 +1841,7 @@ async function init() {
   document.getElementById("btn-add-artikel").addEventListener("click", addArtikel);
   document.getElementById("btn-export-text").addEventListener("click", exportText);
   document.getElementById("btn-export-pdf").addEventListener("click", exportPdf);
+  document.getElementById("btn-export-xlsx").addEventListener("click", exportXlsx);
   document.getElementById("export-aktion").addEventListener("change", (e) => { exportAktionId = e.target.value; });
   document.getElementById("export-inhalt").addEventListener("change", (e) => { exportInhalt = e.target.value; });
 

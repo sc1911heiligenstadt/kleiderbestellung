@@ -168,7 +168,7 @@
         <div class="card-header-row">
           <h2>Export</h2>
         </div>
-        <p class="muted">Zwei Listen: die <strong>Zusammenfassung</strong> geht an den Lieferanten (nach Artikel und Größe summiert), die <strong>Verteilliste</strong> begleitet die Ausgabe (eine Zeile je Person und Teil, mit Kürzel statt Namen und einem Kästchen zum Abhaken). Wähle eine einzelne Bestellaktion oder alle zusammen (dann steht jede Aktion in einem eigenen Abschnitt).</p>
+        <p class="muted">Zwei Listen: die <strong>Zusammenfassung</strong> geht an den Lieferanten (nach Artikel und Größe summiert), die <strong>Verteilliste</strong> begleitet die Ausgabe (eine Zeile je Person und Teil, mit Kürzel statt Namen und einem Kästchen zum Abhaken). Wähle eine einzelne Bestellaktion oder alle zusammen (dann steht jede Aktion in einem eigenen Abschnitt). Beide Listen gibt es als Text, als PDF zum Ausdrucken und als Excel-Mappe zum Weiterrechnen — dort wird jede Bestellaktion ein eigenes Tabellenblatt.</p>
         <div class="form-grid">
           <div class="form-field"><label for="export-inhalt">Inhalt</label><select id="export-inhalt">
             <option value="artikel">Zusammenfassung nach Artikel und Größe (Lieferant)</option>
@@ -179,6 +179,7 @@
         <div class="btn-row" style="justify-content:flex-start;">
           <button type="button" class="btn secondary" id="btn-export-text">Export als Text</button>
           <button type="button" class="btn secondary" id="btn-export-pdf">Export als PDF</button>
+          <button type="button" class="btn secondary" id="btn-export-xlsx">Export als Excel</button>
         </div>
       </div>
 
@@ -190,12 +191,12 @@
 <!-- Druckbereich (nur für PDF-Export sichtbar) -->
 <div id="print-area"><div id="print-content"></div></div>
 
-<script src="config.js?v=1.7"></script>
+<script src="config.js?v=1.8"></script>
 <script src="db.js?v=1.0"></script>
 <!-- Selbstgeschriebener QR-Encoder, byte-genau aus dem Kadermanager übernommen
      (dort gegen die Referenzimplementierung segno verifiziert). Kein CDN: der
      Token im Link würde sonst bei jedem Aufruf an einen fremden Server gemeldet. -->
 <script src="qrcode.js?v=1.0"></script>
-<script src="app.js?v=1.5"></script>
+<script src="app.js?v=1.6"></script>
 </body>
 </html>

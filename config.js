@@ -75,9 +75,10 @@ const APP_FUNKTIONEN = [
     items: [
       "Tabelle aller abgegebenen Bestellungen mit Name, Positionen und letzter Änderung — jede Bestellaktion als eigener aufklappbarer Abschnitt mit eigener Summe.",
       "Bestellungen über den Spieler-Link sind gekennzeichnet, tragen den Jahrgang und zählen ganz normal mit.",
-      "Export als Text- oder PDF-Datei, gruppiert nach Artikel und Größe — so lässt sie sich direkt an den Lieferanten weiterreichen.",
+      "Export als Text-, PDF- oder Excel-Datei, gruppiert nach Artikel und Größe — so lässt sie sich direkt an den Lieferanten weiterreichen.",
       "Alternativ die Verteilliste: eine Zeile je Person und Teil, mit Kürzel statt Namen und einem Kästchen zum Abhaken. Schon ausgegebene Teile tragen dort das Datum statt des Kästchens.",
-      "Der Export lässt sich auf eine einzelne Bestellaktion einschränken; „Alle Bestellaktionen“ liefert eine Datei mit einem Abschnitt je Aktion."
+      "Der Export lässt sich auf eine einzelne Bestellaktion einschränken; „Alle Bestellaktionen“ liefert eine Datei mit einem Abschnitt je Aktion.",
+      "Die Excel-Mappe legt jede Bestellaktion auf ein eigenes Tabellenblatt, mit fetter Kopfzeile, festgehaltener Überschriftenzeile, Filter und Gesamtzeile. Die Menge steht dort als echte Zahl — es lässt sich damit rechnen."
     ]
   },
   {
@@ -116,6 +117,19 @@ const APP_FUNKTIONEN = [
 ];
 
 const APP_CHANGELOG = [
+  {
+    version: "1.7",
+    groups: [
+      {
+        title: "Die Listen gibt es jetzt auch als Excel-Datei",
+        items: [
+          "Neben „Export als Text“ und „Export als PDF“ steht jetzt „Export als Excel“. Der Knopf gilt für beide Listen — für die Zusammenfassung an den Lieferanten genauso wie für die Verteilliste.",
+          "Jede Bestellaktion bekommt in der Mappe ein eigenes Tabellenblatt mit dem Namen der Aktion. Die Kopfzeile ist fett und bleibt beim Scrollen stehen, über den Spalten sitzt ein Filter, und unten steht die Gesamtzeile.",
+          "Die Mengen sind echte Zahlen und kein Text. Damit lässt sich in Excel rechnen, sortieren und filtern."
+        ]
+      }
+    ]
+  },
   {
     version: "1.6",
     groups: [
