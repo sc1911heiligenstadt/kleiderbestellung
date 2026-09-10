@@ -29,7 +29,8 @@ const APP_FUNKTIONEN = [
       "Jede Aktion hat ihr eigenes Bestellfenster: eine kann beim Lieferanten und damit geschlossen sein, während eine andere noch läuft.",
       "Eine geschlossene Aktion sehen nur noch die, die dort auch bestellt haben; ihre Bestellungen sind dann nur noch lesbar.",
       "Eine Aktion durchläuft drei Zustände: „läuft“ (es wird bestellt), „geschlossen“ (die Bestellung wird zusammengestellt) und „abgeschlossen“ (beim Lieferanten aufgegeben). Abschließen geht erst nach dem Schließen; zurücknehmen lässt es sich jederzeit.",
-      "Mit dem Abschluss wird die Ausgabeliste freigeschaltet."
+      "Mit dem Abschluss wird die Ausgabeliste freigeschaltet.",
+      "Für die nächste Runde lässt sich eine Aktion kopieren: der Knopf „Kopieren“ übernimmt den kompletten Artikelkatalog und den Hinweistext in eine neue, leere und offene Aktion. Bestellungen, Ausgabe-Haken und der Link für Spieler bleiben bei der alten Runde."
     ]
   },
   {
@@ -117,6 +118,19 @@ const APP_FUNKTIONEN = [
 ];
 
 const APP_CHANGELOG = [
+  {
+    version: "1.8",
+    groups: [
+      {
+        title: "Eine Bestellaktion lässt sich kopieren",
+        items: [
+          "Steht die nächste Runde derselben Bestellung an, legt der Knopf „Kopieren“ in den Einstellungen eine neue Bestellaktion mit demselben Artikelkatalog und demselben Hinweistext an. Die Artikel müssen nicht noch einmal eingetippt werden.",
+          "Die Kopie startet leer und offen: die Bestellungen, die abgehakte Ausgabe und der Link für Spieler bleiben bei der alten Runde.",
+          "Den Namen schlägt die App als „… (2. Runde)“ vor und zählt bei jeder weiteren Kopie hoch; er lässt sich im Feld überschreiben."
+        ]
+      }
+    ]
+  },
   {
     version: "1.7",
     groups: [

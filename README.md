@@ -37,6 +37,12 @@ zwei gleichnamige Spieler.
    Abhaken, mit Datum. Dazu passt die zweite Exportart, die **Verteilliste** —
    eine Zeile je Person und Teil, mit Kürzel statt Namen.
 
+5. Steht eine zweite Runde an, wird die Aktion **kopiert**: der Knopf *Kopieren* legt
+   eine neue Bestellaktion mit demselben Artikelkatalog und demselben Hinweistext an
+   — offen und leer. Bestellungen, Ausgabe-Haken und der Link für Spieler bleiben bei
+   der alten Runde. Den Namen schlägt die App als *„… (2. Runde)"* vor und zählt bei
+   jeder weiteren Kopie hoch.
+
 Eine Aktion durchläuft also drei Zustände: *läuft* → *geschlossen* → *abgeschlossen*.
 Abschließen geht erst nach dem Schließen; zurücknehmen jederzeit, die bereits
 abgehakte Ausgabe bleibt dabei erhalten. Jede Aktion hat ihr eigenes Bestellfenster:

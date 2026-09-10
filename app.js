@@ -222,8 +222,11 @@ function findAktion(aktionId, data) {
   return (data || appData).aktionen.find((a) => a.id === aktionId) || null;
 }
 
-function alleArtikel() {
-  return appData.aktionen.flatMap((a) => a.artikel);
+// Ohne Argument über den angezeigten Stand, mit `data` über den frischen Stand
+// innerhalb einer saveWithConflictRetry-Mutation — dort muss eine neu vergebene
+// Artikel-Id gegen das gelten, was gerade wirklich in der Datei steht.
+function alleArtikel(data) {
+  return (data || appData).aktionen.flatMap((a) => a.artikel);
 }
 
 function meineBestellung(aktion) {
@@ -626,6 +629,7 @@ function renderAktionenVerwaltung() {
           <button type="button" class="btn secondary small btn-extern-aktion">${offenesExternPanel === a.id ? "Link ausblenden" : "🔗 Link für Spieler"}</button>
           ${toggleBtn}
           ${abschlussBtn}
+          <button type="button" class="btn secondary small btn-copy-aktion">Kopieren</button>
           <button type="button" class="btn secondary small btn-delete-aktion">Entfernen</button>
         </div>
       </div>
@@ -910,6 +914,85 @@ async function abschlussUmschalten(aktionId) {
   }
   if (!confirm(`Bestellaktion "${aktion.name}" abschließen? Damit gilt die Bestellung als beim Lieferanten aufgegeben, und die Ausgabeliste wird freigeschaltet.`)) return;
   await updateAktion(aktionId, { abgeschlossen: true, abgeschlossenAm: new Date().toISOString() });
+}
+
+// ---------- Bestellaktion kopieren ----------
+//
+// Eine zweite Runde derselben Bestellung ist der Normalfall: gleiche Artikel,
+// gleiche Groessen, nur neue Bestellungen. Innerhalb EINER Aktion gibt es keinen
+// Verlauf -- eine wiederverwendete Aktion ueberschriebe die alte Runde. Also wird
+// kopiert statt wiederverwendet, und der Katalog muss niemand neu tippen.
+//
+// ⚠️ Kopiert werden Name, Hinweis und der komplette Artikelkatalog (auch die
+// deaktivierten Artikel, mit ihrem Zustand). NICHT kopiert werden Bestellungen,
+// Ausgabe-Haken, Abschluss und der externe Link-Token: derselbe Token stuende
+// sonst an zwei Aktionen und der Worker faende nicht mehr die richtige.
+//
+// ⚠️ Jeder kopierte Artikel bekommt eine NEUE Id -- Artikel-Ids sind ueber alle
+// Aktionen hinweg eindeutig (siehe addArtikel). Beide Id-Vergaben laufen INNERHALB
+// der Mutation gegen den frischen Datenstand: saveWithConflictRetry ruft seine
+// Mutation bei einem Konflikt ein zweites Mal auf, und eine vorher gewuerfelte Id
+// koennte dann bereits von einer parallel angelegten Aktion belegt sein.
+
+function kopierNameVorschlag(name) {
+  const m = String(name || "").match(/^(.*?)\s*\((\d+)\.\s*Runde\)\s*$/);
+  if (m) return `${m[1]} (${Number(m[2]) + 1}. Runde)`;
+  return `${String(name || "").trim()} (2. Runde)`;
+}
+
+async function kopiereAktion(aktionId) {
+  if (!canAdmin()) return;
+  showAktionenError("");
+  const quelle = findAktion(aktionId);
+  if (!quelle) return;
+  const anzahl = quelle.artikel.length;
+  const eingabe = prompt(
+    `Bestellaktion "${quelle.name}" kopieren.\n\n` +
+    `${anzahl} Artikel werden mitgenommen. Bestellungen, Ausgabe-Haken und der Link für Spieler werden NICHT kopiert — die neue Aktion startet leer und offen.\n\n` +
+    `Name der neuen Bestellaktion:`,
+    kopierNameVorschlag(quelle.name));
+  if (eingabe === null) return;
+  const name = eingabe.trim();
+  if (!name) { showAktionenError("Der Name der Kopie darf nicht leer sein."); return; }
+  let neueId = "";
+  try {
+    await saveWithConflictRetry((data) => {
+      const q = findAktion(aktionId, data);
+      if (!q) throw new Error("Diese Bestellaktion wurde inzwischen entfernt.");
+      neueId = slugify(name, data.aktionen.map((a) => a.id));
+      // Die Liste waechst mit: sonst bekaemen zwei gleichnamige Artikel derselben
+      // Aktion ("Hose" zweimal) beim Kopieren dieselbe neue Id.
+      const vergeben = alleArtikel(data).map((a) => a.id);
+      const artikel = q.artikel.map((art) => {
+        const id = slugify(art.name, vergeben);
+        vergeben.push(id);
+        // groessen bewusst als eigene Kopie: ein geteiltes Array haenge bis zum
+        // naechsten Speichern an beiden Aktionen zugleich.
+        return {
+          id,
+          name: art.name,
+          groessen: (art.groessen || []).slice(),
+          standardMenge: art.standardMenge,
+          aktiv: art.aktiv !== false
+        };
+      });
+      const kopie = { id: neueId, name, offen: true, artikel, bestellungen: {} };
+      if ((q.hinweis || "").trim()) kopie.hinweis = q.hinweis;
+      // Direkt hinter das Original: die Runden einer Bestellung stehen so beieinander.
+      const pos = data.aktionen.findIndex((a) => a.id === aktionId);
+      data.aktionen.splice(pos < 0 ? data.aktionen.length : pos + 1, 0, kopie);
+    });
+  } catch (e) {
+    showAktionenError("Kopieren fehlgeschlagen: " + e.message);
+    return;
+  }
+  // Das Link-Panel der Quelle zeigt nach dem Neuaufbau sonst auf die falsche Zeile.
+  offenesExternPanel = null;
+  // Die Katalog-Gruppe der Kopie aufklappen — sonst sehen die kopierten Artikel
+  // aus wie nicht angelegt. Die Gruppe steht noch nicht im DOM, daher reicht das Set.
+  offeneKatalogGruppen.add(neueId);
+  renderEinstellungen();
+  renderMeineBestellung();
 }
 
 async function deleteAktion(aktionId) {
@@ -1872,6 +1955,8 @@ async function init() {
       toggleAktion(aktionId);
     } else if (e.target.closest(".btn-abschluss-aktion")) {
       abschlussUmschalten(aktionId);
+    } else if (e.target.closest(".btn-copy-aktion")) {
+      kopiereAktion(aktionId);
     } else if (e.target.closest(".btn-delete-aktion")) {
       deleteAktion(aktionId);
     }
