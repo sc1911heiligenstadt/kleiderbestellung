@@ -907,7 +907,22 @@ async function toggleAktion(aktionId) {
   }
   const offen = aktion.offen !== false;
   if (offen && !confirm(`Bestellaktion "${aktion.name}" wirklich schließen? Bestellungen lassen sich danach nicht mehr ändern.`)) return;
-  await updateAktion(aktionId, { offen: !offen });
+  // ⚠️ Wieder oeffnen holt die Aktion zugleich aus dem Archiv. "Archiviert"
+  // und "offen" sind zwei unabhaengige Schalter, und ohne diese Zeile blieben
+  // sie es auch: die Aktion liefe wieder, Spieler koennten ueber den Link
+  // bestellen -- in der Uebersicht staende sie aber weiter im ZUGEKLAPPTEN
+  // Block "Archiv" ganz unten (renderUebersicht filtert auf !istArchiviert).
+  // Die neuen Bestellungen landeten dort, wo niemand hinsieht.
+  //
+  // Nur beim Oeffnen. Beim Schliessen bleibt der Archivstand, wie er war --
+  // eine geschlossene Aktion aus dem Archiv zu holen waere das Gegenteil des
+  // Aufraeumens. Von Hand archivieren geht danach wie vorher.
+  const aenderung = { offen: !offen };
+  if (!offen && istArchiviert(aktion)) {
+    aenderung.archiviert = false;
+    aenderung.archiviertAm = "";
+  }
+  await updateAktion(aktionId, aenderung);
 }
 
 // "Abschließen" heißt: die Bestellung ist beim Lieferanten aufgegeben. Ab da

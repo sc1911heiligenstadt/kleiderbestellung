@@ -85,6 +85,7 @@ const normalizeAppData = F("normalizeAppData");
 const istArchiviert = F("istArchiviert");
 const archivUmschalten = F("archivUmschalten");
 const kopiereAktion = F("kopiereAktion");
+const toggleAktion = F("toggleAktion");
 
 const fehlerText = () => stubEl("aktionen-error").textContent || "";
 
@@ -173,6 +174,43 @@ console.log("\n2. Umschalten");
   d.aktionen[1].archiviertAm = "2026-09-05T00:00:00.000Z";
   await archivUmschalten("spielerpaket");
   gleich("zurueckholen geht auch bei einer laufenden Aktion", d.aktionen[1].archiviert, false);
+}
+// ⚠️ Bugjagd 10.09.2026, Fund 2: "archiviert" und "offen" waren zwei ganz
+// unabhaengige Schalter. Wer eine archivierte Aktion wieder oeffnete, bekam
+// eine laufende Runde, die in der Uebersicht im ZUGEKLAPPTEN Archiv-Block
+// stand -- neue Bestellungen liefen dort ein, wo niemand hinsieht.
+{
+  const d = neu();
+  d.aktionen[0].offen = false;
+  d.aktionen[0].abgeschlossen = false;
+  d.aktionen[0].archiviert = true;
+  d.aktionen[0].archiviertAm = "2026-09-05T00:00:00.000Z";
+  await toggleAktion("trainerpaket");
+  gleich("wieder oeffnen setzt offen", d.aktionen[0].offen, true);
+  gleich("wieder oeffnen holt zugleich aus dem Archiv", d.aktionen[0].archiviert, false);
+  gleich("und loescht das Archiv-Datum", d.aktionen[0].archiviertAm, "");
+  gleich("in EINEM Speichervorgang", gespeichert.length, 1);
+}
+{
+  // Gegenprobe: Schliessen fasst den Archivstand NICHT an. Eine geschlossene
+  // Aktion aus dem Archiv zu holen waere das Gegenteil des Aufraeumens.
+  const d = neu();
+  d.aktionen[1].archiviert = true;
+  d.aktionen[1].archiviertAm = "2026-09-05T00:00:00.000Z";
+  await toggleAktion("spielerpaket");
+  gleich("schliessen setzt offen auf false", d.aktionen[1].offen, false);
+  gleich("schliessen laesst die Archiv-Marke stehen", d.aktionen[1].archiviert, true);
+  gleich("und das Archiv-Datum auch", d.aktionen[1].archiviertAm, "2026-09-05T00:00:00.000Z");
+}
+{
+  // Und eine nicht archivierte Aktion bekommt beim Oeffnen keine leeren
+  // Archivfelder untergeschoben.
+  const d = neu();
+  d.aktionen[0].offen = false;
+  d.aktionen[0].abgeschlossen = false;
+  await toggleAktion("trainerpaket");
+  gleich("nicht archiviert: bleibt nicht archiviert", d.aktionen[0].archiviert, false);
+  gleich("und das Archiv-Datum bleibt leer", d.aktionen[0].archiviertAm, "");
 }
 {
   const d = neu(false); // kein Bearbeiter

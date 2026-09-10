@@ -31,7 +31,7 @@ const APP_FUNKTIONEN = [
       "Eine Aktion durchläuft drei Zustände: „läuft“ (es wird bestellt), „geschlossen“ (die Bestellung wird zusammengestellt) und „abgeschlossen“ (beim Lieferanten aufgegeben). Abschließen geht erst nach dem Schließen; zurücknehmen lässt es sich jederzeit.",
       "Mit dem Abschluss wird die Ausgabeliste freigeschaltet.",
       "Für die nächste Runde lässt sich eine Aktion kopieren: der Knopf „Kopieren“ übernimmt den kompletten Artikelkatalog und den Hinweistext in eine neue, leere und offene Aktion. Bestellungen, Ausgabe-Haken und der Link für Spieler bleiben bei der alten Runde.",
-      "Eine erledigte Runde lässt sich archivieren. Sie rutscht dann in der Bestellungsübersicht in einen zugeklappten Block „Archiv“ ans Ende — ihre Bestellungen bleiben darin vollständig einsehbar, und Ausgabeliste, Katalog und Export ändern sich nicht. Archivieren geht erst nach dem Schließen, Zurückholen jederzeit."
+      "Eine erledigte Runde lässt sich archivieren. Sie rutscht dann in der Bestellungsübersicht in einen zugeklappten Block „Archiv“ ans Ende — ihre Bestellungen bleiben darin vollständig einsehbar, und Ausgabeliste, Katalog und Export ändern sich nicht. Archivieren geht erst nach dem Schließen, Zurückholen jederzeit — und wer eine archivierte Aktion wieder öffnet, holt sie damit zugleich aus dem Archiv."
     ]
   },
   {
@@ -119,6 +119,18 @@ const APP_FUNKTIONEN = [
 ];
 
 const APP_CHANGELOG = [
+  {
+    version: "1.10",
+    groups: [
+      {
+        title: "„Wieder öffnen“ holt eine Aktion zugleich aus dem Archiv",
+        items: [
+          "Eine archivierte Bestellaktion wieder zu öffnen ließ sie bisher trotzdem im zugeklappten Block „Archiv“ stehen. Sie lief also wieder, Spieler konnten über den Link bestellen — die neuen Bestellungen landeten aber ganz unten in einem Block, den man erst aufklappen muss.",
+          "Jetzt rutscht sie beim Öffnen automatisch wieder nach oben zu den laufenden Aktionen. „Archivieren“ und „Aus dem Archiv holen“ von Hand funktionieren unverändert; beim Schließen bleibt der Archivstand, wie er war."
+        ]
+      }
+    ]
+  },
   {
     version: "1.9",
     groups: [
