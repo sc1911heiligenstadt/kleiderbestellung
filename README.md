@@ -42,6 +42,12 @@ zwei gleichnamige Spieler.
    — offen und leer. Bestellungen, Ausgabe-Haken und der Link für Spieler bleiben bei
    der alten Runde. Den Namen schlägt die App als *„… (2. Runde)"* vor und zählt bei
    jeder weiteren Kopie hoch.
+6. Ist die Runde durch und die Ware verteilt, wird die Aktion **archiviert**. In der
+   Bestellungsübersicht rutscht sie damit in einen zugeklappten Block *Archiv* ans
+   Ende, damit die laufende Aktion oben nicht untergeht. Weggeräumt ist dabei nicht
+   weggenommen: die Bestellungen stehen im Block vollständig da, und Ausgabeliste,
+   Artikelkatalog und Export fassen eine archivierte Aktion unverändert an.
+   Archivieren geht erst ab *geschlossen*, Zurückholen jederzeit.
 
 Eine Aktion durchläuft also drei Zustände: *läuft* → *geschlossen* → *abgeschlossen*.
 Abschließen geht erst nach dem Schließen; zurücknehmen jederzeit, die bereits

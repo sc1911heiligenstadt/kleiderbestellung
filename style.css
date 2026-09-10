@@ -239,6 +239,25 @@ button.btn:disabled { opacity: 0.6; cursor: default; }
 .uebersicht-gruppe { margin-bottom: 18px; }
 .uebersicht-gruppe:last-child { margin-bottom: 0; }
 
+/* ---------- Archiv-Block in der Bestellungsübersicht ----------
+   Erledigte Runden rutschen hier hinein, damit die laufende oben nicht
+   untergeht. Bewusst gedaempft und abgesetzt: der Block soll als Ablage
+   lesbar sein und nicht mit den aktiven Aktionen darueber konkurrieren. */
+.uebersicht-archiv {
+  margin-top: 24px;
+  padding: 14px 16px;
+  background: var(--gray);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+/* Der Titel im Archiv-Kopf ist grau statt blau -- sonst zieht die Ablage mehr
+   Aufmerksamkeit als die laufende Bestellaktion darueber. */
+.uebersicht-archiv > summary.gruppen-kopf h3.katalog-gruppe-titel { color: var(--muted); }
+.uebersicht-archiv > summary.gruppen-kopf { margin-bottom: 0; }
+.uebersicht-archiv[open] > summary.gruppen-kopf { margin-bottom: 10px; }
+.uebersicht-archiv .archiv-hinweis { font-size: 12px; margin-bottom: 14px; }
+.uebersicht-archiv .uebersicht-gruppe:last-child { margin-bottom: 0; }
+
 /* ---------- Aufklappbare Felder ----------
    Muster aus Trainerdaten (accordion-card): <details>/<summary> statt eigener
    Toggle-Logik, der Pfeil kommt als ::before auf die <summary>.

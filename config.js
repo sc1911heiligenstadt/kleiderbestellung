@@ -30,7 +30,8 @@ const APP_FUNKTIONEN = [
       "Eine geschlossene Aktion sehen nur noch die, die dort auch bestellt haben; ihre Bestellungen sind dann nur noch lesbar.",
       "Eine Aktion durchläuft drei Zustände: „läuft“ (es wird bestellt), „geschlossen“ (die Bestellung wird zusammengestellt) und „abgeschlossen“ (beim Lieferanten aufgegeben). Abschließen geht erst nach dem Schließen; zurücknehmen lässt es sich jederzeit.",
       "Mit dem Abschluss wird die Ausgabeliste freigeschaltet.",
-      "Für die nächste Runde lässt sich eine Aktion kopieren: der Knopf „Kopieren“ übernimmt den kompletten Artikelkatalog und den Hinweistext in eine neue, leere und offene Aktion. Bestellungen, Ausgabe-Haken und der Link für Spieler bleiben bei der alten Runde."
+      "Für die nächste Runde lässt sich eine Aktion kopieren: der Knopf „Kopieren“ übernimmt den kompletten Artikelkatalog und den Hinweistext in eine neue, leere und offene Aktion. Bestellungen, Ausgabe-Haken und der Link für Spieler bleiben bei der alten Runde.",
+      "Eine erledigte Runde lässt sich archivieren. Sie rutscht dann in der Bestellungsübersicht in einen zugeklappten Block „Archiv“ ans Ende — ihre Bestellungen bleiben darin vollständig einsehbar, und Ausgabeliste, Katalog und Export ändern sich nicht. Archivieren geht erst nach dem Schließen, Zurückholen jederzeit."
     ]
   },
   {
@@ -118,6 +119,19 @@ const APP_FUNKTIONEN = [
 ];
 
 const APP_CHANGELOG = [
+  {
+    version: "1.9",
+    groups: [
+      {
+        title: "Erledigte Bestellaktionen wandern ins Archiv",
+        items: [
+          "Ist eine Runde durch und die Ware verteilt, räumt der Knopf „Archivieren“ in den Einstellungen sie weg. In der Bestellungsübersicht rutscht sie dann in einen zugeklappten Block „Archiv“ ganz unten, damit die laufende Aktion oben nicht untergeht.",
+          "Weggeräumt ist nicht weggenommen: die Bestellungen stehen im Archiv-Block vollständig da, und Ausgabeliste, Artikelkatalog und Export fassen eine archivierte Aktion unverändert an.",
+          "Archivieren geht erst, wenn die Aktion geschlossen ist — eine laufende Runde bleibt stehen. Mit „Aus dem Archiv holen“ kommt sie jederzeit zurück."
+        ]
+      }
+    ]
+  },
   {
     version: "1.8",
     groups: [

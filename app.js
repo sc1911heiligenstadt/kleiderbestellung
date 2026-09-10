@@ -93,6 +93,11 @@ function normalizeAktion(a, index) {
   // Lieferanten aufgegeben. Erst ab da wird die Ausgabe abgehakt.
   if (typeof x.abgeschlossen !== "boolean") x.abgeschlossen = false;
   if (typeof x.abgeschlossenAm !== "string") x.abgeschlossenAm = "";
+  // Vierter, davon UNABHAENGIGER Schalter: eine erledigte Runde raeumt sich aus
+  // der Bestellungsuebersicht in den Archiv-Block. Reine Anzeige -- die Daten
+  // bleiben vollstaendig da, Export und Ausgabe fassen sie weiter an.
+  if (typeof x.archiviert !== "boolean") x.archiviert = false;
+  if (typeof x.archiviertAm !== "string") x.archiviertAm = "";
   // Die Ausgabe-Haken liegen BEWUSST neben den Bestellungen und nicht in den
   // Positionen: eine Bestellung wird beim Speichern komplett ersetzt
   // (bestellungen[username] = {...}), ein Haken in der Position waere danach weg.
@@ -151,6 +156,14 @@ function normalizeAppData(data) {
 
 function istAbgeschlossen(aktion) {
   return aktion.offen === false && aktion.abgeschlossen === true;
+}
+
+// Archiv = erledigte Runde. Bewusst NUR ein Anzeige-Schalter fuer die
+// Bestellungsuebersicht (Michel-Vorgabe vom 2026-09-10): der Artikelkatalog, die
+// Ausgabeliste, der Export und die Bestell-Seite zeigen eine archivierte Aktion
+// unveraendert weiter. Nichts wird geloescht und nichts zurueckgehalten.
+function istArchiviert(aktion) {
+  return !!aktion && aktion.archiviert === true;
 }
 
 function aktionStatus(aktion) {
@@ -616,19 +629,26 @@ function renderAktionenVerwaltung() {
       `<button type="button" class="btn secondary small btn-toggle-aktion">${offen ? "Schließen" : "Wieder öffnen"}</button>`;
     const abschlussBtn = offen ? "" :
       `<button type="button" class="btn secondary small btn-abschluss-aktion">${abgeschlossen ? "Abschluss zurücknehmen" : "Bestellung abschließen"}</button>`;
+    // Archivieren erst ab "geschlossen": eine laufende Runde gehoert nicht weg.
+    // Zurueckholen dagegen immer -- sonst haenge eine versehentlich archivierte
+    // Aktion fest, sobald jemand sie wieder oeffnet.
+    const archiviert = istArchiviert(a);
+    const archivBtn = (offen && !archiviert) ? "" :
+      `<button type="button" class="btn secondary small btn-archiv-aktion">${archiviert ? "Aus dem Archiv holen" : "Archivieren"}</button>`;
     return `
     <div class="aktion-row-wrap" data-aktion-id="${escapeHtml(a.id)}">
       <div class="aktion-row ${offen ? "" : "zu"}${abgeschlossen ? " fertig" : ""}">
         <div class="aktion-row-main">
           <input type="text" class="aktion-name" value="${escapeHtml(a.name)}" />
           <textarea class="aktion-hinweis-feld" rows="2" placeholder="Hinweis für die Bestellenden (optional) — steht im Bestellformular über den Artikeln, z.B. zur Kostenübernahme">${escapeHtml(a.hinweis || "")}</textarea>
-          <span class="muted aktion-row-meta">${a.artikel.length} Artikel · ${anzahl} Bestellung${anzahl === 1 ? "" : "en"}${externMeta} · ${status.label}${abschlussMeta}</span>
+          <span class="muted aktion-row-meta">${a.artikel.length} Artikel · ${anzahl} Bestellung${anzahl === 1 ? "" : "en"}${externMeta} · ${status.label}${abschlussMeta}${archiviert ? " · 📁 im Archiv" : ""}</span>
         </div>
         <div class="aktion-row-actions">
           <button type="button" class="btn secondary small btn-save-aktion">Speichern</button>
           <button type="button" class="btn secondary small btn-extern-aktion">${offenesExternPanel === a.id ? "Link ausblenden" : "🔗 Link für Spieler"}</button>
           ${toggleBtn}
           ${abschlussBtn}
+          ${archivBtn}
           <button type="button" class="btn secondary small btn-copy-aktion">Kopieren</button>
           <button type="button" class="btn secondary small btn-delete-aktion">Entfernen</button>
         </div>
@@ -914,6 +934,40 @@ async function abschlussUmschalten(aktionId) {
   }
   if (!confirm(`Bestellaktion "${aktion.name}" abschließen? Damit gilt die Bestellung als beim Lieferanten aufgegeben, und die Ausgabeliste wird freigeschaltet.`)) return;
   await updateAktion(aktionId, { abgeschlossen: true, abgeschlossenAm: new Date().toISOString() });
+}
+
+// ---------- Bestellaktion archivieren ----------
+//
+// Nach ein paar Runden stapeln sich die alten Aktionen in der Bestellungsuebersicht
+// und die laufende geht darin unter. "Archivieren" raeumt eine erledigte Runde in
+// einen zugeklappten Archiv-Block am Ende dieser Uebersicht.
+//
+// ⚠️ Der Schalter ist bewusst von Hand zu bedienen und NICHT an den Abschluss
+// gekoppelt: mit dem Abschluss faengt die Ausgabe erst an. Waere das automatisch,
+// verschwaende die Aktion genau in dem Moment, in dem am meisten mit ihr gearbeitet
+// wird. Archiviert wird, wenn die Ware verteilt ist -- das weiss nur ein Mensch.
+//
+// ⚠️ Und es ist ein reiner ANZEIGE-Schalter: Ausgabeliste, Export, Artikelkatalog
+// und die Bestell-Seite fassen eine archivierte Aktion unveraendert an. Sonst waere
+// aus "wegraeumen" ein "wegnehmen" geworden.
+
+async function archivUmschalten(aktionId) {
+  if (!canAdmin()) return;
+  showAktionenError("");
+  const aktion = findAktion(aktionId);
+  if (!aktion) return;
+  if (istArchiviert(aktion)) {
+    await updateAktion(aktionId, { archiviert: false, archiviertAm: "" });
+    return;
+  }
+  // Eine laufende Aktion gehoert nicht ins Archiv -- es wird ja noch bestellt.
+  // Der Knopf steht dort gar nicht erst; diese zweite, davon unabhaengige
+  // Schranke faengt den Weg ueber die Konsole ab.
+  if (aktion.offen !== false) {
+    showAktionenError(`"${aktion.name}" läuft noch. Erst schließen, dann lässt sich die Aktion archivieren.`);
+    return;
+  }
+  await updateAktion(aktionId, { archiviert: true, archiviertAm: new Date().toISOString() });
 }
 
 // ---------- Bestellaktion kopieren ----------
@@ -1251,50 +1305,74 @@ function ausgabeZeile(aktion, schluessel) {
   return `<span class="muted">Ausgabe: ${st.ausgegeben} von ${st.gesamt} Teilen${fertig ? " ✔ vollständig" : ""}</span>`;
 }
 
+// Ob der Archiv-Block aufgeklappt ist. Die Uebersicht wird bei jeder Aenderung
+// komplett neu gebaut -- ohne diesen Merker klappte das Archiv beim Loeschen einer
+// Bestellung wieder zu, mitten im Nachschauen. Gleiche Bauform wie
+// offeneUebersichtGruppen, nur fuer den einen aeusseren Block.
+let archivBlockOffen = false;
+
+// Archivierte Aktionen bleiben in der Uebersicht, rutschen aber in einen
+// zugeklappten Block ans Ende. Ausgeblendet ist NICHT zurueckgehalten: die
+// Bestellungen stehen vollstaendig darin, mit denselben Knoepfen wie oben.
 function renderBestellungsuebersicht() {
   const mitBestellungen = appData.aktionen.filter(aktionHatBestellungen);
   document.getElementById("uebersicht-empty").style.display = mitBestellungen.length ? "none" : "block";
   const uebersichtRows = document.getElementById("uebersicht-rows");
   sammleAufklappZustand(uebersichtRows, "details.uebersicht-gruppe", offeneUebersichtGruppen);
-  uebersichtRows.innerHTML = mitBestellungen.map((aktion) => {
-    const artikelById = Object.fromEntries(aktion.artikel.map((a) => [a.id, a]));
-    // ⚠️ Der Schlüssel ist NICHT immer ein Nutzername: bei einer Bestellung über
-    // den externen Link lautet er "extern:<name>.<jahrgang>" und gehört zu
-    // niemandem in nutzer.json.
-    const rows = Object.entries(aktion.bestellungen)
-      .map(([schluessel, b]) => Object.assign({ schluessel }, b))
-      .sort((a, b) => `${a.vorname} ${a.nachname}`.localeCompare(`${b.vorname} ${b.nachname}`, "de"));
-    return `
-      <details class="uebersicht-gruppe" data-aktion-id="${escapeHtml(aktion.id)}"${offeneUebersichtGruppen.has(aktion.id) ? " open" : ""}>
+  // Denselben Zustand auch fuer den Archiv-Block einsammeln, aus demselben Grund.
+  const bisher = uebersichtRows.querySelector("details.uebersicht-archiv");
+  if (bisher) archivBlockOffen = !!bisher.open;
+  const aktiv = mitBestellungen.filter((a) => !istArchiviert(a));
+  const archiv = mitBestellungen.filter(istArchiviert);
+  uebersichtRows.innerHTML = aktiv.map(uebersichtGruppeHtml).join("") + (archiv.length ? `
+      <details class="uebersicht-archiv"${archivBlockOffen ? " open" : ""}>
         <summary class="gruppen-kopf">
-          <h3 class="katalog-gruppe-titel">${escapeHtml(aktion.name)}</h3>
-          <span class="muted gruppen-anzahl">${rows.length} Bestellung${rows.length === 1 ? "" : "en"}</span>
+          <h3 class="katalog-gruppe-titel">📁 Archiv</h3>
+          <span class="muted gruppen-anzahl">${archiv.length} erledigte Bestellaktion${archiv.length === 1 ? "" : "en"}</span>
         </summary>
-        ${rows.map((r) => {
-          const extern = r.quelle === "extern";
-          const jahrgang = extern && r.jahrgang ? ` (${escapeHtml(r.jahrgang)})` : "";
-          const badge = extern ? `<span class="quelle-badge" title="Über den Bestell-Link abgegeben, ohne Vereinskonto">über Link</span>` : "";
-          // Zurücksetzen nur anbieten, wenn wirklich ein Passwort gesetzt ist —
-          // sonst sieht es aus, als bewirke der Knopf nichts.
-          const resetBtn = (extern && r.pw && r.pw.hash)
-            ? `<button type="button" class="btn secondary small btn-reset-passwort" data-schluessel="${escapeHtml(r.schluessel)}" data-aktion-id="${escapeHtml(aktion.id)}">Passwort zurücksetzen</button>`
-            : "";
-          return `
-        <div class="confirm-row">
-          <div class="confirm-row-info">
-            <span class="confirm-name">${escapeHtml((r.vorname + " " + r.nachname).trim() || r.schluessel)}${jahrgang}${badge}</span>
-            <span class="muted">${escapeHtml(positionenLabel(r.positionen, artikelById))}</span>
-            <span class="muted">Zuletzt geändert: ${escapeHtml(fmtDate(r.letzteAenderung))}${r.kommentar ? " — " + escapeHtml(r.kommentar) : ""}</span>
-            ${ausgabeZeile(aktion, r.schluessel)}
-          </div>
-          <div class="confirm-row-actions">
-            ${resetBtn}
-            <button type="button" class="btn secondary small btn-delete-bestellung" data-schluessel="${escapeHtml(r.schluessel)}" data-aktion-id="${escapeHtml(aktion.id)}">Löschen</button>
-          </div>
-        </div>`;
-        }).join("")}
-      </details>`;
-  }).join("");
+        <p class="muted archiv-hinweis">Erledigte Runden. Die Bestellungen sind vollständig da — sie stehen nur nicht mehr oben. Ausgabeliste und Export fassen sie unverändert an. Zurückholen unter <em>Einstellungen → Bestellaktionen</em>.</p>
+        ${archiv.map(uebersichtGruppeHtml).join("")}
+      </details>` : "");
+}
+
+function uebersichtGruppeHtml(aktion) {
+  const artikelById = Object.fromEntries(aktion.artikel.map((a) => [a.id, a]));
+  // ⚠️ Der Schlüssel ist NICHT immer ein Nutzername: bei einer Bestellung über
+  // den externen Link lautet er "extern:<name>.<jahrgang>" und gehört zu
+  // niemandem in nutzer.json.
+  const rows = Object.entries(aktion.bestellungen)
+    .map(([schluessel, b]) => Object.assign({ schluessel }, b))
+    .sort((a, b) => `${a.vorname} ${a.nachname}`.localeCompare(`${b.vorname} ${b.nachname}`, "de"));
+  return `
+    <details class="uebersicht-gruppe" data-aktion-id="${escapeHtml(aktion.id)}"${offeneUebersichtGruppen.has(aktion.id) ? " open" : ""}>
+      <summary class="gruppen-kopf">
+        <h3 class="katalog-gruppe-titel">${escapeHtml(aktion.name)}</h3>
+        <span class="muted gruppen-anzahl">${rows.length} Bestellung${rows.length === 1 ? "" : "en"}</span>
+      </summary>
+      ${rows.map((r) => {
+        const extern = r.quelle === "extern";
+        const jahrgang = extern && r.jahrgang ? ` (${escapeHtml(r.jahrgang)})` : "";
+        const badge = extern ? `<span class="quelle-badge" title="Über den Bestell-Link abgegeben, ohne Vereinskonto">über Link</span>` : "";
+        // Zurücksetzen nur anbieten, wenn wirklich ein Passwort gesetzt ist —
+        // sonst sieht es aus, als bewirke der Knopf nichts.
+        const resetBtn = (extern && r.pw && r.pw.hash)
+          ? `<button type="button" class="btn secondary small btn-reset-passwort" data-schluessel="${escapeHtml(r.schluessel)}" data-aktion-id="${escapeHtml(aktion.id)}">Passwort zurücksetzen</button>`
+          : "";
+        return `
+      <div class="confirm-row">
+        <div class="confirm-row-info">
+          <span class="confirm-name">${escapeHtml((r.vorname + " " + r.nachname).trim() || r.schluessel)}${jahrgang}${badge}</span>
+          <span class="muted">${escapeHtml(positionenLabel(r.positionen, artikelById))}</span>
+          <span class="muted">Zuletzt geändert: ${escapeHtml(fmtDate(r.letzteAenderung))}${r.kommentar ? " — " + escapeHtml(r.kommentar) : ""}</span>
+          ${ausgabeZeile(aktion, r.schluessel)}
+        </div>
+        <div class="confirm-row-actions">
+          ${resetBtn}
+          <button type="button" class="btn secondary small btn-delete-bestellung" data-schluessel="${escapeHtml(r.schluessel)}" data-aktion-id="${escapeHtml(aktion.id)}">Löschen</button>
+        </div>
+      </div>`;
+      }).join("")}
+    </details>`;
 }
 
 async function deleteBestellung(aktionId, schluessel) {
@@ -1955,6 +2033,8 @@ async function init() {
       toggleAktion(aktionId);
     } else if (e.target.closest(".btn-abschluss-aktion")) {
       abschlussUmschalten(aktionId);
+    } else if (e.target.closest(".btn-archiv-aktion")) {
+      archivUmschalten(aktionId);
     } else if (e.target.closest(".btn-copy-aktion")) {
       kopiereAktion(aktionId);
     } else if (e.target.closest(".btn-delete-aktion")) {
