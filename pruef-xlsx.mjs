@@ -68,7 +68,7 @@ vm.createContext(sandbox);
 // deklarierten Werte erreichbar macht. Die landen nicht auf globalThis.
 vm.runInContext(
   fs.readFileSync("app.js", "utf8") + `
-globalThis.__konstanten = { EXPORT_FELDER, XLSX_MIME, JSZIP_URL };
+globalThis.__konstanten = { EXPORT_FELDER, XLSX_MIME, JSZIP_URL, PREIS_LUECKEN_HINWEIS };
 globalThis.__setAppData = (d) => { appData = d; };
 globalThis.__setExport = (inhalt, aktionId) => { exportInhalt = inhalt; exportAktionId = aktionId; };`,
   sandbox, { filename: "app.js" });
@@ -85,7 +85,8 @@ const _xmlEsc = F("_xmlEsc");
 const _xlsxSpaltenName = F("_xlsxSpaltenName");
 const _xlsxTeile = F("_xlsxTeile");
 const exportBloecke = F("exportBloecke");
-const { EXPORT_FELDER, XLSX_MIME, JSZIP_URL } = sandbox.__konstanten;
+const exportSummen = F("exportSummen");
+const { EXPORT_FELDER, XLSX_MIME, JSZIP_URL, PREIS_LUECKEN_HINWEIS } = sandbox.__konstanten;
 
 // ---------- Testdaten ----------
 //
@@ -98,8 +99,8 @@ const daten = normalizeAppData({
     {
       id: "a1", name: "Trainerpaket 2026", offen: false, abgeschlossen: true,
       artikel: [
-        { id: "hoodie", name: "Hoodie \"Team\" & Co", groessen: ["S", "M", "L"], standardMenge: 1, aktiv: true },
-        { id: "polo", name: "Polo <Shirt>", groessen: ["M", "L"], standardMenge: 1, aktiv: true }
+        { id: "hoodie", name: "Hoodie \"Team\" & Co", groessen: ["S", "M", "L"], standardMenge: 1, preisCent: 2490, aktiv: true },
+        { id: "polo", name: "Polo <Shirt>", groessen: ["M", "L"], standardMenge: 1, preisCent: 1950, aktiv: true }
       ],
       bestellungen: {
         "frank.wagner": { vorname: "Frank", nachname: "Wagner", positionen: [
@@ -118,6 +119,7 @@ const daten = normalizeAppData({
     {
       // Verbotene Zeichen im Blattnamen + ein Steuerzeichen mittendrin.
       id: "a2", name: "Spieler/Eltern [Herbst]\u0007", offen: true,
+      // OHNE Preis: dieses Blatt muss die Luecken-Zeile bekommen.
       artikel: [{ id: "stutzen", name: "Stutzen", groessen: ["36-40"], standardMenge: 0, aktiv: true }],
       bestellungen: {
         "extern:tim.klein.2011": { quelle: "extern", vorname: "Tim", nachname: "Klein", jahrgang: "2011",
@@ -127,7 +129,7 @@ const daten = normalizeAppData({
     {
       // Gleicher Name wie a1 -- Excel verlangt eindeutige Blattnamen.
       id: "a3", name: "Trainerpaket 2026", offen: true,
-      artikel: [{ id: "jacke", name: "Jacke", groessen: ["M"], standardMenge: 1, aktiv: true }],
+      artikel: [{ id: "jacke", name: "Jacke", groessen: ["M"], standardMenge: 1, preisCent: 4999, aktiv: true }],
       bestellungen: {
         "maria.brandt": { vorname: "Maria", nachname: "Brandt",
           positionen: [{ artikelId: "jacke", groesse: "M", menge: 1 }] }
@@ -136,7 +138,8 @@ const daten = normalizeAppData({
     {
       // Weit über 31 Zeichen.
       id: "a4", name: "Funktionaerspaket Winterausstattung 2026/2027", offen: true,
-      artikel: [{ id: "muetze", name: "Mütze", groessen: ["one size"], standardMenge: 2, aktiv: true }],
+      // Preis 0 = kostenlos. Muss als echter Betrag durchgehen, nicht als "kein Preis".
+      artikel: [{ id: "muetze", name: "Mütze", groessen: ["one size"], standardMenge: 2, preisCent: 0, aktiv: true }],
       bestellungen: {
         "peter.klein": { vorname: "Peter", nachname: "Klein",
           positionen: [{ artikelId: "muetze", groesse: "one size", menge: 2 }] }
@@ -158,7 +161,7 @@ const teileFuer = (inhalt, aktionId) => {
   const bloecke = exportBloecke();
   const fields = EXPORT_FELDER[inhalt === "person" ? "person" : "artikel"];
   const mengeKey = inhalt === "person" ? "menge" : "summe";
-  return { bloecke, fields, mengeKey, teile: _xlsxTeile(bloecke, fields, mengeKey) };
+  return { bloecke, fields, mengeKey, teile: _xlsxTeile(bloecke, fields) };
 };
 
 // ---------- 1. Blattnamen ----------
@@ -322,8 +325,8 @@ console.log("\n5. Beide Inhalte");
 {
   const artikel = teileFuer("artikel", "");
   const person = teileFuer("person", "");
-  gleich("Zusammenfassung hat drei Spalten", artikel.fields.length, 3);
-  gleich("Verteilliste hat fuenf Spalten", person.fields.length, 5);
+  gleich("Zusammenfassung hat fuenf Spalten", artikel.fields.length, 5);
+  gleich("Verteilliste hat sieben Spalten", person.fields.length, 7);
   zusage("die Verteilliste traegt Kuerzel statt Namen",
     teileFuer("person", "").teile["xl/sharedStrings.xml"].includes("<t xml:space=\"preserve\">FW</t>"));
   zusage("kein Klarname in der Verteilliste",
@@ -340,6 +343,74 @@ console.log("\n5. Beide Inhalte");
   zusage("und traegt deren bereinigten Namen",
     eine.teile["xl/workbook.xml"].includes('name="Spieler Eltern Herbst"'),
     eine.teile["xl/workbook.xml"]);
+}
+
+// ---------- 5b. Geldspalten ----------
+
+console.log("\n5b. Geldspalten");
+{
+  const { bloecke, fields, teile } = teileFuer("artikel", "");
+  const blatt1 = teile["xl/worksheets/sheet1.xml"];   // Trainerpaket, ueberall Preise
+  const spalte = (key) => _xlsxSpaltenName(fields.findIndex((f) => f.key === key));
+
+  // Der Preis muss als Zahl in der Zelle stehen, nicht als Text mit Euro-Zeichen.
+  const einzel = spalte("preisCent");
+  const preisZellen = [...blatt1.matchAll(new RegExp(`<c r="${einzel}(\\d+)"([^>]*)><v>([^<]*)</v>`, "g"))]
+    .filter((m) => m[1] !== "1");
+  zusage("Einzelpreise sind Zahlen, kein Text",
+    preisZellen.length > 0 && preisZellen.every((m) => !m[2].includes('t="s"')),
+    JSON.stringify(preisZellen.map((m) => m.slice(1, 4))));
+  zusage("Einzelpreise stehen in Euro, nicht in Cent",
+    preisZellen.some((m) => m[3] === "24.9"),
+    JSON.stringify(preisZellen.map((m) => m[3])));
+  zusage("Geldzellen tragen das Waehrungsformat",
+    preisZellen.every((m) => / s="2"/.test(m[2])),
+    JSON.stringify(preisZellen.map((m) => m[2])));
+  zusage("kein Euro-Zeichen im Zellentext",
+    !teile["xl/sharedStrings.xml"].includes("€"),
+    "das Euro-Zeichen gehoert ins Zahlenformat, nicht in die Zelle");
+
+  // Einzelpreise duerfen NICHT summiert werden -- das ergaebe eine Zahl ohne
+  // Bedeutung, die wie eine Summe aussieht.
+  const zeilen = bloecke[0].zeilen;
+  const summenZeile = zeilen.length + 2;
+  zusage("die Einzelpreis-Spalte bleibt in der Gesamtzeile leer",
+    !new RegExp(`<c r="${einzel}${summenZeile}"`).test(blatt1), blatt1.slice(-600));
+  const gesamtSpalte = spalte("gesamtCent");
+  const sollSumme = zeilen.reduce((a, z) => a + z.gesamtCent, 0) / 100;
+  zusage("die Gesamtpreis-Summe steht fett und mit Waehrungsformat unten",
+    blatt1.includes(`<c r="${gesamtSpalte}${summenZeile}" s="3"><v>${sollSumme}</v></c>`),
+    "erwartet " + sollSumme + " in " + gesamtSpalte + summenZeile);
+
+  // styles.xml: eigenes Zahlenformat, richtige Reihenfolge, Id ab 164.
+  const styles = teile["xl/styles.xml"];
+  zusage("es gibt ein eigenes Euro-Zahlenformat", styles.includes('numFmtId="164"'));
+  zusage("numFmts steht vor fonts", styles.indexOf("<numFmts") < styles.indexOf("<fonts"));
+  zusage("cellXfs zaehlt seine vier Eintraege richtig",
+    styles.includes('<cellXfs count="4">') && (styles.match(/<xf /g) || []).length === 5,
+    (styles.match(/<cellXfs count="\d+">/) || [""])[0]);
+
+  // Ein Artikel OHNE Preis: leere Zelle statt 0,00 Euro, dazu der Hinweis.
+  const ohne = teileFuer("artikel", "a2");
+  const blattOhne = ohne.teile["xl/worksheets/sheet1.xml"];
+  const einzelOhne = _xlsxSpaltenName(ohne.fields.findIndex((f) => f.key === "preisCent"));
+  zusage("ohne Preis bleibt die Zelle leer statt 0",
+    !new RegExp(`<c r="${einzelOhne}2"`).test(blattOhne), blattOhne);
+  const hinweisId = ohne.teile["xl/sharedStrings.xml"].includes(PREIS_LUECKEN_HINWEIS.replace(/—/g, "—"));
+  zusage("die Mappe sagt selbst, dass die Geldsumme unvollstaendig ist", hinweisId,
+    "der Hinweis fehlt in sharedStrings");
+  const hinweisZeile = ohne.bloecke[0].zeilen.length + 3;
+  gleich("dimension deckt die Hinweiszeile mit ab",
+    (blattOhne.match(/<dimension ref="A1:([A-Z]+)(\d+)"/) || [])[2], String(hinweisZeile));
+  zusage("der Filter laesst Gesamt- UND Hinweiszeile draussen",
+    blattOhne.includes(`<autoFilter ref="A1:${_xlsxSpaltenName(ohne.fields.length - 1)}${hinweisZeile - 2}"/>`),
+    (blattOhne.match(/<autoFilter[^>]*>/) || [""])[0]);
+
+  // Preis 0 ist ein Betrag (kostenlos), kein fehlender Preis.
+  const gratis = teileFuer("artikel", "a4");
+  zusage("Preis 0 gilt als Betrag, nicht als fehlender Preis",
+    !gratis.teile["xl/sharedStrings.xml"].includes(PREIS_LUECKEN_HINWEIS),
+    "ein Preis von 0 darf nicht als Luecke gelten");
 }
 
 // ---------- 6. Rueckweg: echte Datei zurueckgelesen ----------
@@ -392,18 +463,29 @@ print(json.dumps(out, ensure_ascii=False))
       const blattName = namen[i];
       const ist = gelesen[blattName];
       if (!ist) { zusage(inhalt + ": Blatt gefunden: " + blattName, false, Object.keys(gelesen).join(", ")); return; }
+      // Geldspalten stehen als EURO-ZAHL in der Mappe (Cent/100), nicht als
+      // Text mit Euro-Zeichen -- sonst liesse sich in Excel nicht rechnen.
+      // Ohne Preis bleibt die Zelle leer, nicht 0.
+      const zellSoll = (f, wert) => {
+        if (f.geld) return (wert === null || wert === undefined) ? "" : Number(wert) / 100;
+        if (f.num) return Number(wert || 0);
+        return String(wert);
+      };
+      const summen = exportSummen(fields, zeilen);
       const soll = [
         fields.map((f) => f.label),
-        ...zeilen.map((z) => fields.map((f) => (f.key === mengeKey ? Number(z[f.key]) : String(z[f.key])))),
-        fields.map((f, c) => (f.key === mengeKey
-          ? zeilen.reduce((a, z) => a + Number(z[mengeKey]), 0)
-          : (c === 0 ? "Gesamt" : "")))
+        ...zeilen.map((z) => fields.map((f) => zellSoll(f, z[f.key]))),
+        fields.map((f, c) => (f.summe ? zellSoll(f, summen.werte[c]) : (c === 0 ? "Gesamt" : "")))
       ];
+      if (summen.luecken) soll.push(fields.map((f, c) => (c === 0 ? PREIS_LUECKEN_HINWEIS : "")));
       gleich(inhalt + ": Blatt " + blattName + " steht Zelle fuer Zelle richtig drin", ist, soll);
       const mengenSpalte = fields.findIndex((f) => f.key === mengeKey);
+      // Die Luecken-Hinweiszeile ganz unten ist Text und keine Datenzeile --
+      // sie traegt in der Mengenspalte nichts und bleibt hier draussen.
+      const datenUndSumme = summen.luecken ? ist.slice(1, -1) : ist.slice(1);
       zusage(inhalt + ": Blatt " + blattName + ": Mengen sind Zahlen",
-        ist.slice(1).every((r) => typeof r[mengenSpalte] === "number"),
-        JSON.stringify(ist.slice(1).map((r) => r[mengenSpalte])));
+        datenUndSumme.every((r) => typeof r[mengenSpalte] === "number"),
+        JSON.stringify(datenUndSumme.map((r) => r[mengenSpalte])));
     });
   }
 

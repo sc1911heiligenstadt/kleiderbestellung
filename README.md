@@ -64,6 +64,13 @@ Namen zeigt die Ausgabeliste in der App.
 Die Menge gibt in der Regel der Verein über den Katalog vor. Steht dort die
 Standardmenge 0, trägt der Besteller sie selbst ein.
 
+Je Artikel lässt sich ein **Preis** hinterlegen. Er ist freiwillig und rein
+intern: sichtbar nur in der Katalogpflege und in den Auswertungen, wo beide
+Listen ihn als Einzel- und Gesamtpreis samt Summe führen. Wer bestellt, sieht
+ihn nirgends — weder im Formular noch über den Spieler-Link. Fehlt der Preis bei
+einzelnen Artikeln, bleiben deren Felder leer und unter der Liste steht ein
+Hinweis; eine ausdrückliche 0 gilt dagegen als Preis (0,00 €).
+
 Liegt für eine Person schon eine Bestellung vor, sagt die Seite das — statt
 stillschweigend eine zweite anzulegen.
 

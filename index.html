@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>👕 Kleiderbestellung</title>
 <meta name="theme-color" content="#1a56a0" />
-<link rel="stylesheet" href="style.css?v=1.5" />
+<link rel="stylesheet" href="style.css?v=1.6" />
 </head>
 <body>
 
@@ -127,7 +127,7 @@
         <div class="card-header-row">
           <h2>Artikelkatalog</h2>
         </div>
-        <p class="muted">Nach Bestellaktion gruppiert. Über das Auswahlfeld in einer Zeile lässt sich ein Artikel in eine andere Aktion verschieben — bereits abgegebene Bestellungen dieses Artikels wandern mit. Standardmenge <strong>0</strong> bedeutet: die Menge ist nicht vorgegeben, wer bestellt, trägt sie selbst ein.</p>
+        <p class="muted">Nach Bestellaktion gruppiert. Über das Auswahlfeld in einer Zeile lässt sich ein Artikel in eine andere Aktion verschieben — bereits abgegebene Bestellungen dieses Artikels wandern mit. Standardmenge <strong>0</strong> bedeutet: die Menge ist nicht vorgegeben, wer bestellt, trägt sie selbst ein. Der <strong>Preis</strong> ist freiwillig und rein intern: er steht nur hier und in den Auswertungen — wer bestellt, sieht ihn nirgends.</p>
         <p class="muted" id="katalog-error" style="display:none; color:#c0392b;"></p>
         <div class="empty-state" id="katalog-empty" style="display:none;">Erst eine Bestellaktion anlegen, dann lassen sich Artikel hinzufügen.</div>
         <div id="katalog-rows"></div>
@@ -137,7 +137,8 @@
             <div class="form-field"><label for="na-aktion">Bestellaktion</label><select id="na-aktion"></select></div>
             <div class="form-field"><label for="na-name">Name</label><input type="text" id="na-name" placeholder="z.B. Trainingsjacke" /></div>
             <div class="form-field"><label for="na-groessen">Größen (Komma-getrennt)</label><input type="text" id="na-groessen" placeholder="z.B. XS, S, M, L, XL, XXL" /></div>
-            <div class="form-field"><label>Standardmenge (0 = frei wählbar)</label><input type="number" id="na-menge" min="0" step="1" value="1" title="0 bedeutet: die Menge wählt der Besteller selbst" /></div>
+            <div class="form-field"><label for="na-menge">Standardmenge (0 = frei wählbar)</label><input type="number" id="na-menge" min="0" step="1" value="1" title="0 bedeutet: die Menge wählt der Besteller selbst" /></div>
+            <div class="form-field"><label for="na-preis">Preis je Stück (nur intern, freiwillig)</label><input type="text" id="na-preis" inputmode="decimal" placeholder="z.B. 24,90" title="Preis je Stück in Euro. Erscheint nur in der Katalogpflege und in den Auswertungen, nie für die Bestellenden." /></div>
           </div>
           <div class="btn-row" style="justify-content:flex-start;">
             <button type="button" class="btn secondary" id="btn-add-artikel">+ Artikel hinzufügen</button>
@@ -168,7 +169,7 @@
         <div class="card-header-row">
           <h2>Export</h2>
         </div>
-        <p class="muted">Zwei Listen: die <strong>Zusammenfassung</strong> geht an den Lieferanten (nach Artikel und Größe summiert), die <strong>Verteilliste</strong> begleitet die Ausgabe (eine Zeile je Person und Teil, mit Kürzel statt Namen und einem Kästchen zum Abhaken). Wähle eine einzelne Bestellaktion oder alle zusammen (dann steht jede Aktion in einem eigenen Abschnitt). Beide Listen gibt es als Text, als PDF zum Ausdrucken und als Excel-Mappe zum Weiterrechnen — dort wird jede Bestellaktion ein eigenes Tabellenblatt.</p>
+        <p class="muted">Zwei Listen: die <strong>Zusammenfassung</strong> geht an den Lieferanten (nach Artikel und Größe summiert), die <strong>Verteilliste</strong> begleitet die Ausgabe (eine Zeile je Person und Teil, mit Kürzel statt Namen und einem Kästchen zum Abhaken). Wähle eine einzelne Bestellaktion oder alle zusammen (dann steht jede Aktion in einem eigenen Abschnitt). Beide Listen gibt es als Text, als PDF zum Ausdrucken und als Excel-Mappe zum Weiterrechnen — dort wird jede Bestellaktion ein eigenes Tabellenblatt. Ist im Artikelkatalog ein Preis hinterlegt, stehen in beiden Listen zusätzlich Einzel- und Gesamtpreis samt Summe.</p>
         <div class="form-grid">
           <div class="form-field"><label for="export-inhalt">Inhalt</label><select id="export-inhalt">
             <option value="artikel">Zusammenfassung nach Artikel und Größe (Lieferant)</option>
@@ -191,12 +192,12 @@
 <!-- Druckbereich (nur für PDF-Export sichtbar) -->
 <div id="print-area"><div id="print-content"></div></div>
 
-<script src="config.js?v=1.11"></script>
+<script src="config.js?v=1.12"></script>
 <script src="db.js?v=1.0"></script>
 <!-- Selbstgeschriebener QR-Encoder, byte-genau aus dem Kadermanager übernommen
      (dort gegen die Referenzimplementierung segno verifiziert). Kein CDN: der
      Token im Link würde sonst bei jedem Aufruf an einen fremden Server gemeldet. -->
 <script src="qrcode.js?v=1.0"></script>
-<script src="app.js?v=1.9"></script>
+<script src="app.js?v=1.10"></script>
 </body>
 </html>

@@ -1042,6 +1042,9 @@ async function kopiereAktion(aktionId) {
           name: art.name,
           groessen: (art.groessen || []).slice(),
           standardMenge: art.standardMenge,
+          // Der Preis wandert mit in die naechste Runde. Er ist die einzige
+          // Stelle, an der er steht -- die Bestellpositionen tragen keinen.
+          preisCent: artikelPreisCent(art),
           aktiv: art.aktiv !== false
         };
       });
@@ -1123,6 +1126,94 @@ function parseStandardMenge(rohText) {
   return n;
 }
 
+// ---------- Preis je Artikel ----------
+//
+// Der Preis haengt wie die Menge am ARTIKEL, nicht an der Bestellposition. Er
+// ist ein reines Verwaltungsfeld: sichtbar in der Katalogpflege und in den
+// Auswertungen, nirgends sonst. Das Bestellformular, die Bestellungsuebersicht,
+// die Ausgabeliste und der Weg ueber den externen Link zeigen ihn NICHT --
+// dort geht es darum, was jemand bekommt, nicht was es kostet.
+//
+// GOTCHA: Gerechnet wird in CENT als ganze Zahl, nie in Euro als Kommazahl.
+// 0,1 + 0,2 ist in Gleitkomma nicht 0,3, und bei Geld faellt so etwas erst in
+// der Summenzeile auf.
+//
+// GOTCHA: Bewusst KEIN Festschreiben des Preises an der Bestellposition (anders
+// als bei der Essensbestellung im Agelan-Tool): hier wird nicht kassiert, die
+// Auswertung fasst gleiche Artikel zusammen, und zwei Preise fuer denselben
+// Artikel in einer Zeile liessen sich gar nicht darstellen. Wer den Katalogpreis
+// nachtraeglich aendert, aendert damit auch die Summe alter Runden -- fuer die
+// naechste Runde wird die Aktion ohnehin kopiert (kopiereAktion), und die Kopie
+// bekommt ihren eigenen Preis.
+
+// Der hinterlegte Preis eines Artikels in Cent -- oder null, wenn keiner
+// hinterlegt ist.
+//
+// GOTCHA: Niemals auf Wahrheitswert pruefen. 0 ist ein gueltiger Preis
+// (kostenlos) und muss von "nichts eingetragen" unterscheidbar bleiben;
+// `if (!preis)` machte aus jedem kostenlosen Teil still ein Teil ohne Preis.
+function artikelPreisCent(artikel) {
+  const roh = artikel ? artikel.preisCent : undefined;
+  if (roh === null || roh === undefined || String(roh).trim() === "") return null;
+  const n = Math.round(Number(roh));
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+// Liest ein Preisfeld der Katalogpflege und gibt CENT zurueck. Leer oder
+// unlesbar ergibt null; der Aufrufer unterscheidet selbst zwischen "leer
+// gelassen" (kein Preis) und "etwas eingetippt, das keine Zahl ist" (Fehler).
+//
+// GOTCHA: Beide Tippgewohnheiten muessen durchgehen -- "24,90" (deutsch) und
+// "24.90" (Ziffernblock, Zwischenablage, Lieferantenliste). Die naheliegende
+// Kurzfassung "alle Punkte raus, Komma zu Punkt" verzehnfacht 1234.56 still zu
+// 123.456,00. Die Regel, die beides traegt:
+//   - Kommt ein KOMMA vor, ist das letzte davon das Dezimaltrennzeichen.
+//   - Kommt nur ein PUNKT vor, entscheidet die Zahl der Ziffern dahinter:
+//     genau drei = Tausendertrennzeichen (1.000), alles andere = Dezimalpunkt.
+function parsePreisCent(rohText) {
+  let s = String(rohText == null ? "" : rohText).trim();
+  if (s === "") return null;
+  s = s.replace(/\s/g, "").replace(/€/g, "").replace(/^EUR/i, "");
+  if (!/^[0-9.,]+$/.test(s)) return null;
+  let normal;
+  if (s.indexOf(",") >= 0) {
+    const schnitt = s.lastIndexOf(",");
+    normal = s.slice(0, schnitt).replace(/[.,]/g, "") + "." + s.slice(schnitt + 1).replace(/[.,]/g, "");
+  } else if (s.indexOf(".") >= 0) {
+    const teile = s.split(".");
+    normal = (teile.length > 2 || teile[teile.length - 1].length === 3) ? teile.join("") : teile.join(".");
+  } else {
+    normal = s;
+  }
+  const wert = Number(normal);
+  if (!Number.isFinite(wert) || wert < 0) return null;
+  // Runden, nicht abschneiden: Math.floor(19.99 * 100) ist 1998.
+  const cent = Math.round(wert * 100);
+  // Obergrenze als reiner Unsinns-Riegel (10 Mio EUR), damit ein verrutschter
+  // Ziffernblock nicht jede Spaltenbreite und jede Summe sprengt. Die Regel
+  // oben bleibt davon unberuehrt -- sie ist der Teil, der stimmen muss.
+  return cent <= 999999999 ? cent : null;
+}
+
+// Cent als deutscher Betrag mit Euro-Zeichen. Ohne Preis bleibt die Zelle LEER
+// statt "0,00 €" -- nicht hinterlegt ist etwas anderes als kostenlos.
+function formatEuro(cent) {
+  if (cent === null || cent === undefined || !Number.isFinite(Number(cent))) return "";
+  return (Number(cent) / 100).toLocaleString("de-DE",
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+}
+
+// Der Wert fuers Eingabefeld: "24,90", ohne Euro-Zeichen und ohne
+// Tausenderpunkt (den liest parsePreisCent zwar, aber im Feld steht er nur im
+// Weg). Leer, wenn kein Preis hinterlegt ist -- dann greift der Platzhalter.
+function preisFeldWert(cent) {
+  if (cent === null || cent === undefined || !Number.isFinite(Number(cent))) return "";
+  return (Number(cent) / 100).toLocaleString("de-DE",
+    { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false });
+}
+
+const PREIS_UNLESBAR = "Der Preis ist nicht lesbar. Erlaubt sind Beträge wie 24,90 oder 24.90 — leer lassen, wenn kein Preis hinterlegt werden soll.";
+
 function aktionOptionsHtml(selectedId) {
   return appData.aktionen.map((a) =>
     `<option value="${escapeHtml(a.id)}" ${a.id === selectedId ? "selected" : ""}>${escapeHtml(a.name)}</option>`).join("");
@@ -1144,10 +1235,11 @@ function renderKatalogVerwaltung() {
         ? a.artikel.map((art) => `
         <div class="katalog-row ${art.aktiv === false ? "inaktiv" : ""}" data-artikel-id="${escapeHtml(art.id)}" data-aktion-id="${escapeHtml(a.id)}">
           <div class="katalog-row-main">
-            <input type="text" class="katalog-name" value="${escapeHtml(art.name)}" />
-            <input type="text" class="katalog-groessen" value="${escapeHtml((art.groessen || []).join(", "))}" />
-            <input type="number" class="katalog-menge" min="0" step="1" value="${escapeHtml(istMengeFrei(art) ? 0 : (art.standardMenge || 1))}" title="Standardmenge — 0 bedeutet: die Menge wählt der Besteller selbst" />
-            <select class="katalog-aktion" title="Zu welcher Bestellaktion gehört der Artikel?">${aktionOptionsHtml(a.id)}</select>
+            <input type="text" class="katalog-name" value="${escapeHtml(art.name)}" aria-label="Name des Artikels" title="Name des Artikels" />
+            <input type="text" class="katalog-groessen" value="${escapeHtml((art.groessen || []).join(", "))}" aria-label="Größen, mit Komma getrennt" title="Größen, mit Komma getrennt" />
+            <input type="number" class="katalog-menge" min="0" step="1" value="${escapeHtml(istMengeFrei(art) ? 0 : (art.standardMenge || 1))}" aria-label="Standardmenge" title="Standardmenge — 0 bedeutet: die Menge wählt der Besteller selbst" />
+            <input type="text" class="katalog-preis" inputmode="decimal" value="${escapeHtml(preisFeldWert(artikelPreisCent(art)))}" placeholder="Preis €" aria-label="Preis in Euro — nur für die Verwaltung" title="Preis je Stück in Euro. Nur hier und in den Auswertungen sichtbar, nie für die Bestellenden. Leer lassen, wenn kein Preis hinterlegt werden soll." />
+            <select class="katalog-aktion" aria-label="Bestellaktion" title="Zu welcher Bestellaktion gehört der Artikel?">${aktionOptionsHtml(a.id)}</select>
           </div>
           <div class="katalog-row-actions">
             <label class="katalog-aktiv-toggle">
@@ -1170,10 +1262,16 @@ async function addArtikel() {
   const name = document.getElementById("na-name").value.trim();
   const groessenRaw = document.getElementById("na-groessen").value.trim();
   const standardMenge = parseStandardMenge(document.getElementById("na-menge").value);
+  const preisRoh = document.getElementById("na-preis").value.trim();
+  const preisCent = parsePreisCent(preisRoh);
   if (!findAktion(aktionId)) { showKatalogError("Bitte eine Bestellaktion auswählen."); return; }
   if (!name) { showKatalogError("Bitte einen Namen eingeben."); return; }
   const groessen = groessenRaw.split(",").map((s) => s.trim()).filter(Boolean);
   if (!groessen.length) { showKatalogError("Bitte mindestens eine Größe eingeben."); return; }
+  // Leer gelassen heisst "kein Preis" und ist in Ordnung. Etwas Getipptes, das
+  // sich nicht lesen laesst, ist ein Vertipper und darf nicht stillschweigend
+  // als "kein Preis" durchgehen.
+  if (preisRoh && preisCent === null) { showKatalogError(PREIS_UNLESBAR); return; }
   // Artikel-IDs sind über alle Aktionen hinweg eindeutig — dann bleibt ein Artikel
   // beim Verschieben in eine andere Aktion derselbe und kollidiert dort mit nichts.
   const id = slugify(name, alleArtikel().map((a) => a.id));
@@ -1181,7 +1279,7 @@ async function addArtikel() {
     await saveWithConflictRetry((data) => {
       const ziel = findAktion(aktionId, data);
       if (!ziel) throw new Error("Diese Bestellaktion wurde inzwischen entfernt.");
-      ziel.artikel.push({ id, name, groessen, standardMenge, aktiv: true });
+      ziel.artikel.push({ id, name, groessen, standardMenge, preisCent, aktiv: true });
     });
   } catch (e) {
     showKatalogError("Speichern fehlgeschlagen: " + e.message);
@@ -1190,6 +1288,7 @@ async function addArtikel() {
   document.getElementById("na-name").value = "";
   document.getElementById("na-groessen").value = "";
   document.getElementById("na-menge").value = "1";
+  document.getElementById("na-preis").value = "";
   // Die Zielgruppe aufklappen — sonst landet der neue Artikel unsichtbar in
   // einer zugeklappten Gruppe und sieht aus wie nicht angelegt. Das open direkt
   // am alten DOM setzen: das folgende Rendern sammelt den Zustand von dort ein
@@ -1563,10 +1662,16 @@ function exportZeilen(aktion) {
   for (const [artikelId, proGroesse] of proArtikel) {
     const artikel = artikelById[artikelId];
     for (const [groesse, summe] of proGroesse) {
+      const preisCent = artikelPreisCent(artikel);
       zeilen.push({
         artikelId,
         groesse,
         summe,
+        // Geldspalten fuehren CENT, nicht fertigen Text -- die Excel-Mappe
+        // braucht eine echte Zahl, und ohne Preis muss die Zelle LEER bleiben
+        // statt 0,00 € zu behaupten.
+        preisCent,
+        gesamtCent: preisCent === null ? null : preisCent * summe,
         artikelName: artikel ? artikel.name : `(gelöscht: ${artikelId})`
       });
     }
@@ -1602,6 +1707,8 @@ function personenZeilen(aktion) {
         artikelName: artikel ? artikel.name : `(gelöscht: ${pos.artikelId})`,
         groesse: pos.groesse,
         menge: Number(pos.menge),
+        preisCent: artikelPreisCent(artikel),
+        gesamtCent: artikelPreisCent(artikel) === null ? null : artikelPreisCent(artikel) * Number(pos.menge),
         ausgegeben: eintrag ? "ausgegeben " + new Date(eintrag.am).toLocaleDateString("de-DE") : "[  ]"
       });
     }
@@ -1615,22 +1722,78 @@ function personenZeilen(aktion) {
 
 // Spalten je Export-Inhalt. "artikel" geht an den Lieferanten (Summen), "person"
 // ist die Verteilliste zum Abhaken.
+//
+// Drei Eigenschaften steuern die drei Ausgaben (Text, PDF, Excel) gemeinsam:
+//   num   -> rechtsbuendig
+//   geld  -> der Wert im Zeilenobjekt ist CENT; Text und PDF formatieren ihn,
+//            Excel bekommt Euro als echte Zahl mit Waehrungsformat
+//   summe -> die Spalte wird in der Gesamtzeile aufaddiert
+//
+// GOTCHA: "Einzelpreis" hat bewusst KEIN summe. Einzelpreise zusammenzuzaehlen
+// ergibt eine Zahl, die nichts bedeutet -- sie saehe aber wie eine Summe aus.
 const EXPORT_FELDER = {
   artikel: [
     { label: "Artikel", key: "artikelName", num: false },
     { label: "Größe", key: "groesse", num: false },
-    { label: "Menge", key: "summe", num: true }
+    { label: "Menge", key: "summe", num: true, summe: true },
+    { label: "Einzelpreis", key: "preisCent", num: true, geld: true },
+    { label: "Gesamtpreis", key: "gesamtCent", num: true, geld: true, summe: true }
   ],
   person: [
     { label: "Kürzel", key: "kuerzel", num: false },
     { label: "Artikel", key: "artikelName", num: false },
     { label: "Größe", key: "groesse", num: false },
-    { label: "Menge", key: "menge", num: true },
+    { label: "Menge", key: "menge", num: true, summe: true },
+    { label: "Einzelpreis", key: "preisCent", num: true, geld: true },
+    { label: "Gesamtpreis", key: "gesamtCent", num: true, geld: true, summe: true },
     { label: "Ausgegeben", key: "ausgegeben", num: false }
   ]
 };
 
+// Eine unvollstaendige Geldsumme liest sich wie eine vollstaendige. Steht in
+// allen drei Ausgaben, sobald mindestens ein Artikel ohne Preis dabei ist.
+const PREIS_LUECKEN_HINWEIS = "Hinweis: Für einzelne Artikel ist kein Preis hinterlegt — die Geldsummen enthalten nur die Artikel mit Preis.";
+
 function exportIstPerson() { return exportInhalt === "person"; }
+
+function exportFelder() { return EXPORT_FELDER[exportIstPerson() ? "person" : "artikel"]; }
+
+// Der Wert einer Spalte als Text. Geldspalten fuehren CENT im Zeilenobjekt --
+// die Formatierung passiert hier, damit Text- und PDF-Ausgabe dieselbe
+// Schreibweise zeigen.
+function exportZellText(f, z) {
+  const wert = z[f.key];
+  if (f.geld) return formatEuro(wert);
+  return String(wert === null || wert === undefined ? "" : wert);
+}
+
+// Die Gesamtzeile eines Blocks: die Summen der `summe`-Spalten, die fertigen
+// Zellen als Text, und ob eine Geldsumme Luecken hat.
+//
+// GOTCHA: Ein fehlender Betrag ist NICHT 0. Er faellt aus der Summe UND wird
+// gemeldet -- sonst steht unter einer halb gepflegten Liste eine Zahl, die wie
+// der volle Wert der Bestellung aussieht.
+function exportSummen(fields, zeilen) {
+  let luecken = false;
+  const werte = fields.map((f) => {
+    if (!f.summe) return null;
+    let s = 0;
+    for (const z of zeilen) {
+      const w = z[f.key];
+      if (w === null || w === undefined || !Number.isFinite(Number(w))) {
+        if (f.geld) luecken = true;
+        continue;
+      }
+      s += Number(w);
+    }
+    return s;
+  });
+  const zellen = fields.map((f, i) => {
+    if (f.summe) return f.geld ? formatEuro(werte[i]) : String(werte[i]);
+    return i === 0 ? "Gesamt" : "";
+  });
+  return { werte, zellen, luecken };
+}
 
 // Die im Export-Panel gewählten Aktionen, jeweils mit ihren Zeilen.
 function exportBloecke() {
@@ -1660,10 +1823,15 @@ function exportTitel() {
 function exportText() {
   const bloecke = exportBloecke();
   if (!bloecke.length) { alert("Es liegen noch keine Bestellungen vor."); return; }
-  const mengeKey = exportIstPerson() ? "menge" : "summe";
-  const fields = EXPORT_FELDER[exportIstPerson() ? "person" : "artikel"];
+  const fields = exportFelder();
   const alleZeilen = bloecke.flatMap((b) => b.zeilen);
-  const widths = fields.map((f) => Math.max(f.label.length, ...alleZeilen.map((z) => String(z[f.key]).length)));
+  // Die Spaltenbreite richtet sich nach dem ANGEZEIGTEN Text, nicht nach dem
+  // Rohwert: in einer Geldspalte stehen Cent-Zahlen, im Ausdruck aber "24,90 €".
+  const breiten = bloecke.map(({ zeilen }) => exportSummen(fields, zeilen).zellen);
+  const widths = fields.map((f, i) => Math.max(
+    f.label.length,
+    ...alleZeilen.map((z) => exportZellText(f, z).length),
+    ...breiten.map((z) => z[i].length)));
   const line = (cells) => cells.map((c, i) => {
     const s = String(c);
     return fields[i].num ? s.padStart(widths[i]) : s.padEnd(widths[i]);
@@ -1673,11 +1841,12 @@ function exportText() {
   let out = `Kleiderbestellung — ${exportTitel()}\n`;
   out += `Erstellt am ${new Date().toLocaleString("de-DE")}\n`;
   for (const { aktion, zeilen } of bloecke) {
-    const gesamt = zeilen.reduce((a, z) => a + z[mengeKey], 0);
+    const summen = exportSummen(fields, zeilen);
     out += `\n${aktion.name} (${aktionStatus(aktion).label})\n`;
     out += line(fields.map((f) => f.label)) + "\n" + sepLine + "\n";
-    out += zeilen.map((z) => line(fields.map((f) => z[f.key]))).join("\n") + "\n";
-    out += sepLine + "\n" + `Gesamt: ${gesamt} Stück\n`;
+    out += zeilen.map((z) => line(fields.map((f) => exportZellText(f, z)))).join("\n") + "\n";
+    out += sepLine + "\n" + line(summen.zellen) + "\n";
+    if (summen.luecken) out += PREIS_LUECKEN_HINWEIS + "\n";
   }
   download(exportDateiname("txt"), "text/plain", "﻿" + out);
 }
@@ -1685,22 +1854,23 @@ function exportText() {
 function exportPdf() {
   const bloecke = exportBloecke();
   if (!bloecke.length) { alert("Es liegen noch keine Bestellungen vor."); return; }
-  const fields = EXPORT_FELDER[exportIstPerson() ? "person" : "artikel"];
-  const mengeKey = exportIstPerson() ? "menge" : "summe";
+  const fields = exportFelder();
   const theadHtml = `<tr>${fields.map((f) => `<th${f.num ? ' class="num"' : ""}>${escapeHtml(f.label)}</th>`).join("")}</tr>`;
   const abschnitte = bloecke.map(({ aktion, zeilen }) => {
     const rowsHtml = zeilen.map((z) =>
-      `<tr>${fields.map((f) => `<td${f.num ? ' class="num"' : ""}>${escapeHtml(z[f.key])}</td>`).join("")}</tr>`).join("");
-    const gesamt = zeilen.reduce((a, z) => a + z[mengeKey], 0);
-    const totalCells = fields.map((f) =>
-      f.key === mengeKey ? `<td class="num">${escapeHtml(gesamt)}</td>` : `<td>${f === fields[0] ? "Gesamt" : ""}</td>`).join("");
+      `<tr>${fields.map((f) => `<td${f.num ? ' class="num"' : ""}>${escapeHtml(exportZellText(f, z))}</td>`).join("")}</tr>`).join("");
+    const summen = exportSummen(fields, zeilen);
+    const totalCells = fields.map((f, i) =>
+      `<td${f.num ? ' class="num"' : ""}>${escapeHtml(summen.zellen[i])}</td>`).join("");
     const totalRow = `<tr class="total-row">${totalCells}</tr>`;
+    const luecken = summen.luecken
+      ? `<p class="print-hinweis">${escapeHtml(PREIS_LUECKEN_HINWEIS)}</p>` : "";
     return `
       <h2 class="print-aktion">${escapeHtml(aktion.name)} (${escapeHtml(aktionStatus(aktion).label)})</h2>
       <table class="print-table">
         <thead>${theadHtml}</thead>
         <tbody>${rowsHtml}${totalRow}</tbody>
-      </table>`;
+      </table>${luecken}`;
   }).join("");
   document.getElementById("print-content").innerHTML = `
     <h1>👕 Kleiderbestellung</h1>
@@ -1795,6 +1965,30 @@ function xlsxBlattname(name, vergeben) {
   return gewaehlt;
 }
 
+// Eine Tabellenzelle mit ihrer Art. Zahlen und Geld bleiben ECHTE Zahlen --
+// als Text koennte in Excel niemand damit rechnen, und genau dafuer holt man
+// sich eine Tabelle.
+//
+// GOTCHA: Geld steht als EURO-Betrag (Cent/100) mit Waehrungsformat, nicht als
+// fertiger Text mit Euro-Zeichen. Und ohne Preis bleibt die Zelle LEER statt
+// 0,00 € -- nicht hinterlegt ist etwas anderes als kostenlos.
+function _xlsxZelle(f, wert) {
+  if (f.geld) {
+    const n = Number(wert);
+    if (wert === null || wert === undefined || !Number.isFinite(n)) return { t: "text", v: "" };
+    return { t: "geld", v: n / 100, text: formatEuro(n) };
+  }
+  if (f.num) return { t: "zahl", v: Number(wert || 0) };
+  return { t: "text", v: wert };
+}
+
+// Wie breit die Zelle im fertigen Blatt wirkt. Fuer Geld zaehlt der angezeigte
+// Betrag, nicht die nackte Zahl -- "1.234,56 €" ist laenger als 1234.56.
+function _xlsxZellText(zelle) {
+  if (!zelle) return "";
+  return zelle.t === "geld" ? String(zelle.text || "") : _xlsxText(zelle.v);
+}
+
 // Baut alle XML-Teile der Mappe: je Bestellaktion ein Blatt mit Kopfzeile,
 // Datenzeilen und Gesamtzeile -- dieselbe Gliederung wie im Text- und
 // PDF-Export, damit alle drei Ausgaben dasselbe sagen.
@@ -1808,7 +2002,7 @@ function xlsxBlattname(name, vergeben) {
 //   - Die Reihenfolge der Elemente in <worksheet> ist im Schema festgelegt
 //     (dimension, sheetViews, sheetFormatPr, cols, sheetData, autoFilter,
 //     pageMargins) -- vertauscht faellt es erst beim Oeffnen auf.
-function _xlsxTeile(bloecke, fields, mengeKey) {
+function _xlsxTeile(bloecke, fields) {
   const kopf = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
   const NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
   const NS_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -1827,29 +2021,37 @@ function _xlsxTeile(bloecke, fields, mengeKey) {
   const vergebeneNamen = new Set();
   const blaetter = bloecke.map(({ aktion, zeilen }, blattNr) => {
     const blattName = xlsxBlattname(aktion.name, vergebeneNamen);
-    const gesamt = zeilen.reduce((a, z) => a + Number(z[mengeKey] || 0), 0);
+    const summen = exportSummen(fields, zeilen);
 
-    // Die Menge bleibt eine echte Zahl. Als Text koennte in Excel niemand damit
-    // rechnen -- und genau dafuer holt man sich eine Tabelle.
     const werteZeilen = [
-      fields.map((f) => f.label),
-      ...zeilen.map((z) => fields.map((f) => (f.key === mengeKey ? Number(z[f.key] || 0) : z[f.key]))),
-      fields.map((f, i) => (f.key === mengeKey ? gesamt : (i === 0 ? "Gesamt" : "")))
+      fields.map((f) => ({ t: "text", v: f.label })),
+      ...zeilen.map((z) => fields.map((f) => _xlsxZelle(f, z[f.key]))),
+      fields.map((f, i) => (f.summe ? _xlsxZelle(f, summen.werte[i])
+        : { t: "text", v: i === 0 ? "Gesamt" : "" }))
     ];
+    const summenZeile = werteZeilen.length;
+    // Der Luecken-Hinweis gehoert IN die Datei, nicht nur auf den Bildschirm:
+    // weitergereicht wird die Mappe, nicht die Seite, auf der sie entstand.
+    if (summen.luecken) {
+      werteZeilen.push(fields.map((f, i) => ({ t: "text", v: i === 0 ? PREIS_LUECKEN_HINWEIS : "" })));
+    }
     const letzteZeile = werteZeilen.length;
     const letzteSpalte = _xlsxSpaltenName(fields.length - 1);
-    const fett = new Set([1, letzteZeile]);   // Kopfzeile und Gesamtzeile
+    const fett = new Set([1, summenZeile]);   // Kopfzeile und Gesamtzeile
 
     const zeilenXml = werteZeilen.map((werte, r) => {
       const nr = r + 1;
-      const stil = fett.has(nr) ? ' s="1"' : "";
-      const zellen = werte.map((wert, c) => {
+      const dick = fett.has(nr);
+      const zellen = werte.map((zelle, c) => {
         const ref = _xlsxSpaltenName(c) + nr;
-        if (typeof wert === "number") {
-          if (!Number.isFinite(wert)) return "";
-          return `<c r="${ref}"${stil}><v>${wert}</v></c>`;
+        // Stilnummern aus styles.xml: 0 normal, 1 fett, 2 Geld, 3 Geld+fett.
+        const s = zelle.t === "geld" ? (dick ? 3 : 2) : (dick ? 1 : 0);
+        const stil = s ? ` s="${s}"` : "";
+        if (zelle.t === "geld" || zelle.t === "zahl") {
+          if (!Number.isFinite(zelle.v)) return "";
+          return `<c r="${ref}"${stil}><v>${zelle.v}</v></c>`;
         }
-        const text = _xlsxText(wert);
+        const text = _xlsxText(zelle.v);
         if (!text) return "";   // leere Zellen laesst Excel selbst auch weg
         textZellen++;
         return `<c r="${ref}"${stil} t="s"><v>${textId(text)}</v></c>`;
@@ -1859,8 +2061,11 @@ function _xlsxTeile(bloecke, fields, mengeKey) {
 
     // Spaltenbreite nach dem laengsten Wert, damit niemand erst jede Spalte
     // aufziehen muss. Gedeckelt, sonst sprengt ein langer Artikelname das Blatt.
+    // Die Hinweiszeile bleibt draussen -- ein ganzer Satz in Spalte A zoege
+    // sonst die Artikelspalte auf Anschlag.
+    const breitenZeilen = werteZeilen.slice(0, summenZeile);
     const colsXml = "<cols>" + fields.map((f, c) => {
-      const laengen = werteZeilen.map((w) => _xlsxText(w[c]).length);
+      const laengen = breitenZeilen.map((w) => _xlsxZellText(w[c]).length);
       const breite = Math.min(40, Math.max(10, ...laengen) + 2);
       return `<col min="${c + 1}" max="${c + 1}" width="${breite}" customWidth="1"/>`;
     }).join("") + "</cols>";
@@ -1873,7 +2078,7 @@ function _xlsxTeile(bloecke, fields, mengeKey) {
 
     // Filter nur ueber Kopf und Daten -- die Gesamtzeile bleibt draussen,
     // sonst filtert Excel sie mit weg.
-    const autoFilter = letzteZeile > 2 ? `<autoFilter ref="A1:${letzteSpalte}${letzteZeile - 1}"/>` : "";
+    const autoFilter = summenZeile > 2 ? `<autoFilter ref="A1:${letzteSpalte}${summenZeile - 1}"/>` : "";
 
     const xml = kopf +
       `<worksheet xmlns="${NS}" xmlns:r="${NS_REL}">` +
@@ -1919,11 +2124,17 @@ function _xlsxTeile(bloecke, fields, mengeKey) {
     `<Relationship Id="rId${blaetter.length + 2}" Type="${NS_REL}/sharedStrings" Target="sharedStrings.xml"/>` +
     '</Relationships>';
 
-  // Minimale Stiltabelle mit genau einem eigenen Format: fett (Kopf- und
-  // Gesamtzeile). Die zwei <fill>-Eintraege erwartet Excel unabhaengig davon,
-  // ob sie benutzt werden.
+  // Minimale Stiltabelle mit zwei eigenen Formaten: fett (Kopf- und
+  // Gesamtzeile) und Euro. Die zwei <fill>-Eintraege erwartet Excel unabhaengig
+  // davon, ob sie benutzt werden.
+  //
+  // GOTCHA: Die Reihenfolge der Bloecke ist im Schema festgelegt --
+  // numFmts steht VOR fonts. Vertauscht oeffnet Excel die Mappe nicht.
+  // Eigene Zahlenformate muessen ausserdem eine Id ab 164 tragen; alles
+  // darunter ist fuer die eingebauten Formate reserviert.
   teile["xl/styles.xml"] = kopf +
     `<styleSheet xmlns="${NS}">` +
+    '<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00&quot; €&quot;"/></numFmts>' +
     '<fonts count="2">' +
     '<font><sz val="11"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>' +
     '<font><b/><sz val="11"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>' +
@@ -1931,9 +2142,11 @@ function _xlsxTeile(bloecke, fields, mengeKey) {
     '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>' +
     '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
     '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-    '<cellXfs count="2">' +
+    '<cellXfs count="4">' +
     '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
     '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+    '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
+    '<xf numFmtId="164" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyNumberFormat="1"/>' +
     '</cellXfs>' +
     '<cellStyles count="1"><cellStyle name="Standard" xfId="0" builtinId="0"/></cellStyles>' +
     '</styleSheet>';
@@ -1956,9 +2169,7 @@ async function exportXlsx() {
   if (btn) { btn.disabled = true; btn.textContent = "Excel wird erzeugt …"; }
   try {
     await ladeJsZip();
-    const fields = EXPORT_FELDER[exportIstPerson() ? "person" : "artikel"];
-    const mengeKey = exportIstPerson() ? "menge" : "summe";
-    const teile = _xlsxTeile(bloecke, fields, mengeKey);
+    const teile = _xlsxTeile(bloecke, exportFelder());
     const zip = new JSZip();
     Object.keys(teile).forEach((pfad) => zip.file(pfad, teile[pfad]));
     const blob = await zip.generateAsync({ type: "blob", mimeType: XLSX_MIME, compression: "DEFLATE" });
@@ -2066,10 +2277,13 @@ async function init() {
       const name = row.querySelector(".katalog-name").value.trim();
       const groessen = row.querySelector(".katalog-groessen").value.split(",").map((s) => s.trim()).filter(Boolean);
       const standardMenge = parseStandardMenge(row.querySelector(".katalog-menge").value);
+      const preisRoh = row.querySelector(".katalog-preis").value.trim();
+      const preisCent = parsePreisCent(preisRoh);
       const aktiv = row.querySelector(".katalog-aktiv").checked;
       const neueAktionId = row.querySelector(".katalog-aktion").value;
       if (!name || !groessen.length) { showKatalogError("Name und mindestens eine Größe erforderlich."); return; }
-      updateArtikel(aktionId, artikelId, { name, groessen, standardMenge, aktiv }, neueAktionId);
+      if (preisRoh && preisCent === null) { showKatalogError(PREIS_UNLESBAR); return; }
+      updateArtikel(aktionId, artikelId, { name, groessen, standardMenge, preisCent, aktiv }, neueAktionId);
     } else if (e.target.closest(".btn-delete-artikel")) {
       deleteArtikel(aktionId, artikelId);
     }

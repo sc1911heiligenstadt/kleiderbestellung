@@ -377,6 +377,8 @@ h3.katalog-gruppe-titel {
 .katalog-name { flex: 1 1 160px; font-weight: 600; }
 .katalog-groessen { flex: 2 1 220px; }
 .katalog-menge { flex: 0 0 90px; }
+/* Etwas breiter als die Menge: hier stehen bis zu "1.234,56". */
+.katalog-preis { flex: 0 0 110px; }
 .katalog-aktion { flex: 1 1 150px; color: var(--muted); }
 .katalog-row-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .katalog-aktiv-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); white-space: nowrap; }
@@ -408,6 +410,8 @@ body.printing-report #print-area { display: block; padding: 20px; }
 .print-table th, .print-table td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; color: #000; }
 .print-table th.num, .print-table td.num { text-align: right; white-space: nowrap; }
 .print-table tr.total-row td { font-weight: 700; border-top: 2px solid #000; }
+/* Steht unter der Tabelle, wenn eine Geldsumme unvollstaendig ist. */
+#print-area .print-hinweis { font-size: 0.78rem; color: #444; margin: 0 0 10px; }
 @media print {
   .print-table tr { page-break-inside: avoid; }
 }

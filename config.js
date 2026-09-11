@@ -37,7 +37,8 @@ const APP_FUNKTIONEN = [
   {
     title: "Artikelkatalog",
     items: [
-      "Artikel mit Namen, verfügbaren Größen und Standardmenge anlegen, bearbeiten, stilllegen oder entfernen.",
+      "Artikel mit Namen, verfügbaren Größen, Standardmenge und Preis anlegen, bearbeiten, stilllegen oder entfernen.",
+      "Der Preis je Stück ist freiwillig und rein intern: er erscheint nur in der Katalogpflege und in den Auswertungen. Wer bestellt, sieht ihn nirgends — auch nicht über den Spieler-Link.",
       "Der Katalog ist nach Bestellaktion gruppiert und je Aktion aufklappbar, mit der Artikelzahl in der Kopfzeile.",
       "Ein Artikel lässt sich in eine andere Bestellaktion verschieben — die schon abgegebenen Bestellungen wandern mit.",
       "Fällt beim Pflegen eine Größe weg, die jemand bereits bestellt hat, kommt eine Rückfrage. Die Bestellung bleibt in jedem Fall erhalten und wird mit dem Zusatz „nicht mehr im Katalog“ angezeigt."
@@ -80,14 +81,17 @@ const APP_FUNKTIONEN = [
       "Export als Text-, PDF- oder Excel-Datei, gruppiert nach Artikel und Größe — so lässt sie sich direkt an den Lieferanten weiterreichen.",
       "Alternativ die Verteilliste: eine Zeile je Person und Teil, mit Kürzel statt Namen und einem Kästchen zum Abhaken. Schon ausgegebene Teile tragen dort das Datum statt des Kästchens.",
       "Der Export lässt sich auf eine einzelne Bestellaktion einschränken; „Alle Bestellaktionen“ liefert eine Datei mit einem Abschnitt je Aktion.",
-      "Die Excel-Mappe legt jede Bestellaktion auf ein eigenes Tabellenblatt, mit fetter Kopfzeile, festgehaltener Überschriftenzeile, Filter und Gesamtzeile. Die Menge steht dort als echte Zahl — es lässt sich damit rechnen."
+      "Die Excel-Mappe legt jede Bestellaktion auf ein eigenes Tabellenblatt, mit fetter Kopfzeile, festgehaltener Überschriftenzeile, Filter und Gesamtzeile. Die Menge steht dort als echte Zahl — es lässt sich damit rechnen.",
+      "Ist im Katalog ein Preis hinterlegt, tragen beide Listen zwei weitere Spalten: Einzelpreis und Gesamtpreis, dazu die Geldsumme in der Gesamtzeile. In der Excel-Mappe steht Geld als Betrag im Euro-Format, mit dem sich rechnen lässt.",
+      "Fehlt bei einzelnen Artikeln der Preis, bleiben deren Preisfelder leer und unter der Liste steht ein Hinweis — eine halbe Geldsumme soll nicht wie eine ganze aussehen."
     ]
   },
   {
     title: "Grenzen",
     items: [
       "Gebrauchte Kleidung läuft nicht hier, sondern über die Kleiderbörse. In diesem Werkzeug wird neue Vereinskleidung bestellt.",
-      "Preise, Rechnungen und Bezahlung gibt es nicht. Die Bestellliste ist die Vorlage, die Bestellung beim Lieferanten gibt jemand selbst auf.",
+      "Preise lassen sich je Artikel hinterlegen und erscheinen in den Auswertungen. Rechnungen, Zahlungsaufforderungen und Bezahlung gibt es aber nicht — die Bestellliste ist die Vorlage, die Bestellung beim Lieferanten gibt jemand selbst auf.",
+      "Der Preis hängt am Artikel, nicht an der einzelnen Bestellung. Wer ihn im Katalog nachträglich ändert, ändert damit auch die Summe schon abgegebener Bestellungen derselben Aktion. Für eine neue Runde die Aktion kopieren — die Kopie bekommt ihre eigenen Preise.",
       "Ein Artikel, der schon bestellt wurde, lässt sich nur stilllegen und nicht löschen — sonst stünden bestehende Bestellungen ohne Bezug da.",
       "Eine Bestellaktion lässt sich erst entfernen, wenn keine Bestellung mehr darin liegt."
     ]
@@ -119,6 +123,21 @@ const APP_FUNKTIONEN = [
 ];
 
 const APP_CHANGELOG = [
+  {
+    version: "1.11",
+    groups: [
+      {
+        title: "Preis je Artikel — nur für die Verwaltung",
+        items: [
+          "Im Artikelkatalog steht hinter der Standardmenge jetzt ein Preisfeld. Es ist freiwillig: wer nichts einträgt, ändert nichts. Beide Schreibweisen gehen, 24,90 und 24.90.",
+          "Der Preis ist rein intern. Er erscheint nur in der Katalogpflege und in den Auswertungen — im Bestellformular, in der Bestellungsübersicht, in der Ausgabeliste und auf der Spieler-Seite steht er nirgends.",
+          "Beide Export-Listen tragen zwei neue Spalten: Einzelpreis und Gesamtpreis, dazu die Geldsumme in der Gesamtzeile. In der Excel-Mappe steht Geld als Euro-Betrag, mit dem sich rechnen lässt.",
+          "Ist bei einzelnen Artikeln kein Preis hinterlegt, bleiben deren Preisfelder leer und unter der Liste steht ein Hinweis — damit eine unvollständige Summe nicht wie eine vollständige aussieht. Eine ausdrückliche 0 gilt dagegen als Preis und erscheint als 0,00 €.",
+          "Beim Kopieren einer Bestellaktion wandern die Preise mit in die neue Runde."
+        ]
+      }
+    ]
+  },
   {
     version: "1.10",
     groups: [
